@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "conexaorawsocket.h": "c",
+        "unistd.h": "c"
+    }
+}
