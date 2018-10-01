@@ -13,29 +13,35 @@ typedef struct Mensagem{
     
 }Mensagem;
 
+typedef struct passar{
+    int a;
+    int b;
+    int c;
+}passar;
+
 enum Tipos{
     NACK,
     ACK,
     OK,
     DADOS,
-    NONE,
+    NONE1,
     FD,  // file descriptor
-    NONE,
+    NONE2,
     SHOW_SCREEN,
-    NONE,
-    NONE,
+    NONE3,
+    NONE4,
     GET,
     PUT,
     CD,
     LS,
     ERRO,
     FIM
-}
+};
 
 enum Erros{
-    NONE,
+    NONE6,
     INEXISTENTE,
     PERMICAO,
     QUOTA,
-    NONE
-}
+    NONE7
+};

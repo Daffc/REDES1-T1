@@ -2,10 +2,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+
 int main(){
 
 
     int filedesk;
+
+    passar jao;
+    jao.a = 1;
+    jao.b = 5;
+    jao.c = 19;
 
     filedesk = ConexaoRawSocket("lo");
 
@@ -13,7 +19,7 @@ int main(){
     msg = malloc(sizeof(char)*20);
     msg = "walkinghere";
 
-    write(filedesk, msg, 20); 
+    write(filedesk, &jao, sizeof(passar));
     
 
 
