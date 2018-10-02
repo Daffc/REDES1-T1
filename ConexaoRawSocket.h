@@ -13,11 +13,15 @@ typedef struct Mensagem{
     
 }Mensagem;
 
-typedef struct passar{
+typedef struct MensagemContent{
     int a;
     int b;
     int c;
-}passar;
+    int d;
+    int e;
+    int f;
+    int g;
+}MensagemContent;
 
 enum Tipos{
     NACK,

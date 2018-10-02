@@ -11,15 +11,16 @@ int main(){
     int saidaread;
     fileslave = ConexaoRawSocket("lo");
 
-    char* msg;
-    msg = malloc(sizeof(char)*20);
+    MensagemContent* msg;
 
-    passar derp;
+    msg = malloc(sizeof(MensagemContent));
+    
     
     while(1){
-        saidaread = read(fileslave, &derp, sizeof(passar));
-        printf("%d %d %d\n",derp.a,derp.b, derp.c);
-    }
+        saidaread = read(fileslave, msg, sizeof(MensagemContent));
+        printf("%d, %d, %d, %d, %d, %d\n", msg->a, msg->b, msg->c, msg->d, msg->e, msg->f);
+        sleep(2);         
+    }   
 
     return 0;
 }
