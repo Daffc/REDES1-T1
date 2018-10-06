@@ -16,10 +16,10 @@ master: master.o ConexaoRawSocket.o
 slave: slave.o ConexaoRawSocket.o 
 	$(CC) slave.o ConexaoRawSocket.o -o slave 
 
-master.o : master.c ConexaoRawSocket.h
+master.o : master.c ConexaoRawSocket.h utilidades.h
 	$(CC) -c master.c 
 
-slave.o : slave.c ConexaoRawSocket.h
+slave.o : slave.c ConexaoRawSocket.h utilidades.h
 	$(CC) -c slave.c 
 
 ConexaoRawSocket.o : ConexaoRawSocket.c ConexaoRawSocket.h
