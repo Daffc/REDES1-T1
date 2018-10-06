@@ -1,7 +1,10 @@
 #include "ConexaoRawSocket.h"
+#include "utilidades.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 
 
@@ -11,16 +14,18 @@ int main(){
     int saidaread;
     fileslave = ConexaoRawSocket("lo");
 
-    MensagemContent* msg;
+    Mensagem* msg;
 
-    msg = malloc(sizeof(MensagemContent));
-    
+    msg = malloc(sizeof(Mensagem));
     
     while(1){
-        saidaread = read(fileslave, msg, sizeof(MensagemContent));
-        printf("%d, %d, %d, %d, %d, %d\n", msg->a, msg->b, msg->c, msg->d, msg->e, msg->f);
-        sleep(2);         
+        
+        recv(fileslave, msg, 14, 0);
+        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+        if(msg->marcador_inicio == 126)   
+            printf("%d, %d, %d, %d, %d\n", msg->marcador_inicio, msg->tamanho, msg->sequencia, msg->tipo, msg->crc);
+        printf("**********************\n");
+    
     }   
-
     return 0;
 }
