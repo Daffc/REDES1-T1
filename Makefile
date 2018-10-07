@@ -1,22 +1,22 @@
 # DOUGLAS AFFONSO CLEMENTINO
 # GRR20175877
 
-CC     = gcc -std=c11 -g
+CC     = gcc -g
 
 EXECS  = master slave
  
 # arquivos-objeto
-objects = master.o slave.o ConexaoRawSocket.o
+objects = master.o slave.o ConexaoRawSocket.o comandos.o
 
 all:  $(EXECS)
 
-master: master.o ConexaoRawSocket.o 
-	$(CC) master.o ConexaoRawSocket.o -o master 
+master: master.o ConexaoRawSocket.o comandos.o 
+	$(CC) master.o ConexaoRawSocket.o comandos.o -o master 
 
 slave: slave.o ConexaoRawSocket.o 
 	$(CC) slave.o ConexaoRawSocket.o -o slave 
 
-master.o : master.c ConexaoRawSocket.h utilidades.h
+master.o : master.c ConexaoRawSocket.h utilidades.h comandos.h
 	$(CC) -c master.c 
 
 slave.o : slave.c ConexaoRawSocket.h utilidades.h
@@ -24,6 +24,9 @@ slave.o : slave.c ConexaoRawSocket.h utilidades.h
 
 ConexaoRawSocket.o : ConexaoRawSocket.c ConexaoRawSocket.h
 	$(CC) -c ConexaoRawSocket.c 
+
+comandos.o : comandos.c comandos.h
+	$(CC) -c comandos.c 
 
 
 clean:
