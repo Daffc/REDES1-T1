@@ -2,15 +2,22 @@
 #ifndef _Utilidades_
 #define _Utilidades_
 
-    typedef struct Mensagem{
-        
-        unsigned char marcador_inicio;
-        unsigned char crc;
+    #define TAMANHO_MAXIMO 131    
+
+    typedef struct ControleMSG{
         unsigned short tamanho:7;
         unsigned short sequencia:5;
         unsigned short tipo:4;
-        //void *dados;
         
+    } ControleMSG;
+
+    typedef struct Mensagem{
+        
+        unsigned char  marcador_inicio;
+        ControleMSG controle;
+        void *dados;
+        unsigned char crc;
+    
     }Mensagem;
 
     enum Tipos{
@@ -38,5 +45,9 @@
         PERMICAO,
         QUOTA,
     };
+
+    void defineBuffer(Mensagem * msg, void * buffer);
+    void recuperaMensagem(Mensagem * msg, void * buffer);    
+    
 
 #endif
