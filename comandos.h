@@ -7,10 +7,10 @@
     /**
      * Retorna ponteiro para descritor de arquivo com resposta.
     */
-    FILE * IniciaDescritorComando( );
+    FILE * IniciaDescritorLs(char *comando, char *local);
     
     /**
     * Finaliza ponteiro previamente aberto.
     */
-    void FinalizaDescritorComando(FILE *fp);
+    void FinalizaDescritorLs(FILE *fp);
 #endif
