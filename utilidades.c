@@ -1,4 +1,5 @@
 #include "utilidades.h"
+#include "comandos.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -27,6 +28,16 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
     // Guarda crc.   
     memcpy(&(msg->crc),buffer + 3 + msg->controle.tamanho, 1);    
     
+}
+
+/**
+ * Imprime localidades LOCAL e REMOTA.
+*/
+void imprimeLocalizacao(char *local,char *remoto){
+    printf("\x1b[32m" "LOCAL" "\x1b[0m" ":\t");
+    printf("%s \n", local);
+    printf("\x1b[32m" "REMOTO" "\x1b[0m" ":\t");
+    printf("%s \n", remoto);
 }
 
 
@@ -58,11 +69,21 @@ void local_cd(){
     // printar na tela o ERRO possivel
 }
 
-void local_ls(){
-    // não precisa verificar autorização
-    // utilizar ls do sistema
-    // folder atual
-    // nosso pwd relativo
+void local_ls(char * comando, char * local){
+    char    retorno;
+    FILE    *fpls;
+    
+
+    // Inicializa descritor com resposta do comando indicado.
+    fpls = IniciaDescritorLs(comando, local);
+
+    /*Le caracter por caracter do arquivo de resposta do ls aberto e gerencia tratamento*/
+    while ((retorno = getc(fpls)) != EOF) {
+        printf("%c", retorno);
+    }
+    
+    // Finaliza descritor utilizado.
+    FinalizaDescritorLs(fpls);
 }
 
 void remote_cd(){
