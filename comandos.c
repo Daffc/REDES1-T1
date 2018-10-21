@@ -16,7 +16,7 @@ FILE * IniciaDescritorLs(char *comando, char *local)
     fp = popen(resultado, "r");
 
     if (fp == NULL) {
-        fprintf(stderr, "Failed to run command\n" );
+        fprintf(stderr, "Não foi possível executar comando\n" );
         exit(1);
     }
 
