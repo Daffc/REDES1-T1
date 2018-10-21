@@ -8,6 +8,36 @@
 #include <stdio.h>
 #include <errno.h>
 
+
+/**
+ * --------------------------------
+ * ----- FUNÇÕES INTERNAS. --------
+ * --------------------------------
+*/
+void removeEspacos(char * origem, char * destino){
+    int i = 0;
+    /**
+    * Removendo espaços da string de origem e salva resutado em destino.
+    */
+    do
+    {
+        if (*origem != ' ')   
+        {
+            destino[i] = *origem;
+            i++;
+        }
+        
+    } while(*origem++);
+    destino[i+1] = '\0';
+}
+
+
+
+/**
+ * --------------------------------
+ * ----- FUNÇÕES EXTERNAS. --------
+ * --------------------------------
+*/
 void defineBuffer(Mensagem * msg, void * buffer){
 
     memcpy(buffer, &(msg->marcador_inicio), 1);
@@ -44,42 +74,23 @@ void imprimeLocalizacao(char *local,char *remoto){
 }
 
 
-
-/*
-    Inicialização:
-        - /
-        String acumula a posição atual
-*/
-
-/*
-    Todas devem possuir
-
-    imprimir o local atual acessado por cd/ls
-    Estados:
-        - $ local
-        - $ remoto
-
-            
-*/
-
-/*
-    Comentarios Rafael noob : olhar onde o programa esta sendo executado
-
-*/
 void local_cd(char * comando, char * local){
     // verificar permissão/existência
     // int access(const char *, int); retorno errno
     // printar na tela o ERRO possivel
 
-    char operador[500];
-    struct stat path_stat;
+    char        operador[500], semEspacos[500];
+    struct      stat path_stat;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, semEspacos);
 
     strcpy(operador, local);
     strcat(operador, "/");    
-    strcat(operador, (comando + 3));
+    strcat(operador, &semEspacos[2]);
 
-    
-    
     /**
      * Verifica existencia e permissão de leitura ao caminho indicado.
     */
@@ -130,20 +141,49 @@ void local_cd(char * comando, char * local){
 }
 
 void local_ls(char * comando, char * local){
-    char    retorno;
-    FILE    *fpls;
-     
-     
-    // Inicializa descritor com resposta do comando indicado.
-    fpls = IniciaDescritorLs(comando, local);
+    char    retorno, operador[100];
+    int     i = 0;
 
-    /*Le caracter por caracter do arquivo de resposta do ls aberto e gerencia tratamento*/
-    while ((retorno = getc(fpls)) != EOF) {
-        printf("%c", retorno);
+    FILE    *fpls = NULL;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, operador);
+
+    //Busca por parametro indicado e inicializa conexão com stream de resposta.
+    if(operador[2] == '\0'){
+        fpls = IniciaDescritorLs("ls", local);
+    }     
+    if(strstr(operador+2, "-l")){
+        fpls = IniciaDescritorLs("ls -l", local);
     }
-    
-    // Finaliza descritor utilizado.
-    FinalizaDescritorLs(fpls);
+    if(strstr(operador+2, "-a")){
+        fpls = IniciaDescritorLs("ls -a", local);
+    }
+    if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
+        fpls = IniciaDescritorLs("ls -la", local);
+    }
+
+    /**
+     * Caso Stream conectando a resposta seja definida, imprime resuldato.
+    */
+    if(fpls){
+        /*Le caracter por caracter do arquivo de resposta do ls aberto e gerencia tratamento*/
+        while ((retorno = getc(fpls)) != EOF) {
+            printf("%c", retorno);
+        }
+        
+        // Finaliza descritor utilizado.
+        FinalizaDescritorLs(fpls);
+        return;  
+    }
+
+    /**
+     * Caso comando seja desconhecido, informa ao usuário.
+    */
+    else
+        printf("Comando '%s' inválido\n", comando);
 }
 
 void remote_cd(){
