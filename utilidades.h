@@ -66,4 +66,9 @@
     */
     void local_ls(char * comando, char * local);
 
+    /**
+     * Trata e executa ls local.
+    */
+    void local_cd(char * comando, char * local);
+
 #endif

@@ -1,9 +1,12 @@
 #include "utilidades.h"
 #include "comandos.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
-
+#include <errno.h>
 
 void defineBuffer(Mensagem * msg, void * buffer){
 
@@ -63,17 +66,74 @@ void imprimeLocalizacao(char *local,char *remoto){
     Comentarios Rafael noob : olhar onde o programa esta sendo executado
 
 */
-void local_cd(){
+void local_cd(char * comando, char * local){
     // verificar permissão/existência
     // int access(const char *, int); retorno errno
     // printar na tela o ERRO possivel
+
+    char operador[500];
+    struct stat path_stat;
+
+    strcpy(operador, local);
+    strcat(operador, "/");    
+    strcat(operador, (comando + 3));
+
+    
+    
+    /**
+     * Verifica existencia e permissão de leitura ao caminho indicado.
+    */
+    if(!access(operador, F_OK | R_OK)){        
+        /**
+         * Caso usuário deseje voltar um diretório.
+        */
+        if(strstr(comando + 3, "..")){
+            /**
+             * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+            */
+            *(strrchr(local, '/')) = '\0';
+        }
+        else{
+            stat(operador, &path_stat);
+            if(S_ISDIR(path_stat.st_mode)){
+                /**
+                 * Redefine local
+                */
+                if(strstr(comando + 3, "..")){
+                    /**
+                     * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+                    */
+                    *(strrchr(local, '/')) = '\0';
+                }
+                else{
+                    /**
+                     * Caso contrário, string analizada é copiada para local.
+                    */
+                    strcpy(local, operador);            
+                }
+            }
+
+            /**
+             * Caso caminho seja válido porem não esteja relacionad a um diretório.
+            */
+            else{
+                printf("O caminho '%s' não aponta para um diretório.\n", operador);
+            }  
+        }
+    }
+    /**
+     * Caso não consiga acessar, printa para usuário erro.
+    */
+    else{
+        printf("Não foi possivel concluir operação em '%s' : %s\n", operador, strerror(errno));
+    }
 }
 
 void local_ls(char * comando, char * local){
     char    retorno;
     FILE    *fpls;
-    
-
+     
+     
     // Inicializa descritor com resposta do comando indicado.
     fpls = IniciaDescritorLs(comando, local);
 
