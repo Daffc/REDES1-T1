@@ -14,7 +14,7 @@ int main(){
     char        retorno, comando[100], local[500], remoto[500];
     void        *buffer;
 
-    conexao = ConexaoRawSocket("lo");
+    // conexao = ConexaoRawSocket("lo");
 
     // buffer = malloc(300);
     
@@ -22,8 +22,15 @@ int main(){
     msg.dados = malloc(127);
         
 
-    strcpy(local, "~/");
-    strcpy(remoto, "~/");
+    strcpy(local, "/home/");
+    strcpy(remoto, "/home/");
+
+    strcat(local, getlogin());
+
+    /**
+     * BUCAT USUÁRIO REMOTO!!!.
+    */
+    // strcat(local, getlogin());
 
     // msg.marcador_inicio = 126;
     // msg.controle.tamanho = 127;
@@ -55,7 +62,7 @@ int main(){
          * Caso comando inicie com a String "ls".
         */
         if(strstr(comando, "cd") ==  comando){
-            printf("COMANDO CD\n");
+            local_cd(comando, local);
         } 
 
         /**
