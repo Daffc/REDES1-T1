@@ -4,8 +4,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/socket.h>
 
+
+void handshakeMsg(Mensagem * msg){
+
+        /**
+         * Recupera nome do usuário atual.
+        */
+        char *hostname;
+        hostname = getlogin();
+
+        /**
+         * Define mensagem com nome do usuario atual.
+        */
+        msg->marcador_inicio = 126;
+        msg->controle.tamanho = strlen(hostname) + 1;
+        memcpy(msg->dados, hostname, strlen(hostname) + 1);
+        msg->controle.sequencia++;
+        
+        /**
+         * Calcular CRC AQUI !!!.
+        */
+        /**/msg->crc = 81;
+        /*---------------------*/
+        free(hostname);
+}
 
 
 int main(){
@@ -33,10 +58,16 @@ int main(){
             printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
             printf("%s\t", (char *)msg.dados); 
             printf("%d\n", msg.crc);
-            
-        }   
-        printf("**********************\n");
-    
+
+            switch(msg.controle.tipo){
+                case HANDSHAKE:
+                    handshakeMsg(&msg);
+                    defineBuffer(&msg, buffer);
+                    write(fileslave, buffer, tamanhoMensagem(&msg));
+                    memset(buffer, 0, TAMANHO_MAXIMO);
+                    break;
+            }            
+        }       
     }   
     return 0;
 }

@@ -13,36 +13,60 @@ int main(){
     int         conexao;
     char        retorno, comando[100], local[500], remoto[500];
     void        *buffer;
-
-    // conexao = ConexaoRawSocket("lo");
-
-    // buffer = malloc(300);
-    
     Mensagem    msg;
+
+    conexao = ConexaoRawSocket("lo");
+
+    buffer = malloc(TAMANHO_MAXIMO);
+    
     msg.dados = malloc(127);
         
 
-    strcpy(local, "/home/");
-    strcpy(remoto, "/home/");
+    // Definindo mensagem inicial.
+    msg.marcador_inicio = 126;
+    msg.controle.tamanho = 0;
+    msg.controle.sequencia = 0;
+    msg.controle.tipo = HANDSHAKE;
+    msg.crc = 81;
+    
+    defineBuffer(&msg, buffer);
+    int resp = write(conexao, buffer, tamanhoMensagem(&msg));
 
-    strcat(local, getlogin());
+    if(resp < 0){
+        printf("Erro ao enviar Mensagem: HANDSHAKE\n");
+        exit(-1);
+    }
+    
+    memset(buffer, 0, TAMANHO_MAXIMO);
 
-    /**
-     * BUCAT USUÁRIO REMOTO!!!.
-    */
-    // strcat(local, getlogin());
+    while(!msg.controle.sequencia){
 
-    // msg.marcador_inicio = 126;
-    // msg.controle.tamanho = 127;
-    // msg.controle.sequencia = 15;
-    // msg.controle.tipo = 1;
-    // msg.crc = 81;
+        resp = read(conexao, buffer, 4 + TAMANHO_MAXIMO);
 
-    // defineBuffer(&msg, buffer);
+        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+        if(*((unsigned char *)buffer) == 126){
+            
+            recuperaMensagem(&msg, buffer);
+
+            printf("%d\t", msg.marcador_inicio);
+            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            printf("%s\t", (char *)msg.dados); 
+            printf("%d\n", msg.crc);
+
+            
+            strcpy(local, "/home/");
+            strcpy(remoto, "/home/");
+
+            strcat(local, getlogin());
+            strcat(remoto, msg.dados);      
+        }       
+    }          
+
+
+    
+
     
     // // NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
-    // int resp = write(conexao, buffer, 4 + msg.controle.tamanho);
-    // printf("Verificação envio: %d\n", resp);
 
     // TESTES COM COMANDOS !!!
     while(1){

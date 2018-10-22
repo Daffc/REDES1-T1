@@ -38,6 +38,18 @@ void removeEspacos(char * origem, char * destino){
  * ----- FUNÇÕES EXTERNAS. --------
  * --------------------------------
 */
+
+/**
+ * Devolve o tamanho da mensaem para envio (Necessário uma vez que mensagens de tamanho menor que 14 não são enviadas)
+*/
+int tamanhoMensagem(Mensagem *msg){
+
+    // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
+    if(msg->controle.tamanho  < 10)
+        return 14;
+    return (msg->controle.tamanho + 4);
+}
+
 void defineBuffer(Mensagem * msg, void * buffer){
 
     memcpy(buffer, &(msg->marcador_inicio), 1);

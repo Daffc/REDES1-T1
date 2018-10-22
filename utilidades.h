@@ -25,7 +25,7 @@
         ACK,
         OK,
         DADOS,
-        NONE1,
+        HANDSHAKE,
         FD,  // file descriptor
         NONE2,
         SHOW_SCREEN,
@@ -46,6 +46,12 @@
         QUOTA,
     };
 
+    /**
+     * Devolve o tamanho da menssagem para envio (Necessário uma vez que mensagens
+     *  de tamanho menor que 14 não são enviadas)
+    */
+    int tamanhoMensagem(Mensagem *msg);
+    
     /**
      * Transfere Mensagem para buffer que será transmitido
     */
