@@ -7,11 +7,12 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <pwd.h>
 
 int main(){
 
     int         conexao;
-    char        retorno, comando[100], local[500], remoto[500];
+    char        retorno, comando[100], local[500], remoto[500], *uName;
     void        *buffer;
     Mensagem    msg;
 
@@ -37,8 +38,7 @@ int main(){
         exit(-1);
     }
     
-    memset(buffer, 0, TAMANHO_MAXIMO);
-
+    memset(buffer, 0, TAMANHO_MAXIMO);  
     while(!msg.controle.sequencia){
 
         resp = read(conexao, buffer, 4 + TAMANHO_MAXIMO);
@@ -53,12 +53,13 @@ int main(){
             printf("%s\t", (char *)msg.dados); 
             printf("%d\n", msg.crc);
 
+            // strcpy(local, "/home/");
+            // strcpy(remoto, "/home/");
             
-            strcpy(local, "/home/");
-            strcpy(remoto, "/home/");
+            uName = getpwuid(geteuid ())->pw_dir; 
 
-            strcat(local, getlogin());
-            strcat(remoto, msg.dados);      
+            getcwd(local, 500);
+            strcpy(remoto, msg.dados);      
         }       
     }          
 

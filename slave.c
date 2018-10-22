@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <pwd.h>
 
 
 void handshakeMsg(Mensagem * msg){
@@ -13,15 +14,16 @@ void handshakeMsg(Mensagem * msg){
         /**
          * Recupera nome do usuário atual.
         */
-        char *hostname;
-        hostname = getlogin();
-
+        char local_dir[500];
+        
+        getcwd(local_dir, 500);
+    
         /**
          * Define mensagem com nome do usuario atual.
         */
         msg->marcador_inicio = 126;
-        msg->controle.tamanho = strlen(hostname) + 1;
-        memcpy(msg->dados, hostname, strlen(hostname) + 1);
+        msg->controle.tamanho = strlen(local_dir) + 1;
+        memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
         msg->controle.sequencia++;
         
         /**
@@ -29,7 +31,6 @@ void handshakeMsg(Mensagem * msg){
         */
         /**/msg->crc = 81;
         /*---------------------*/
-        free(hostname);
 }
 
 
