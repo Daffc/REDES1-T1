@@ -17,7 +17,7 @@ int main(){
 
     filedesk = ConexaoRawSocket("lo");
 
-    buffer = malloc(300);
+    buffer = malloc(TAMANHO_MAXIMO);
     
     Mensagem    msg;
     msg.dados = malloc(127);
@@ -52,7 +52,11 @@ int main(){
 
     //     // Finaliza descritor utilizado.
     //     FinalizaDescritorComando(fpls);
-    // }    
+    // }  
+
+    // vai ter um while()
+    // case switch para todos os comandos...
+
 
     
     return 0;
