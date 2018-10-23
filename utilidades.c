@@ -77,7 +77,7 @@ void remote_ls(){
 
 }
 
-void put(FILE * filedesk, Mensagem * msg){
+void put(FILE * filedesk, char *name){
 
     int try_send_name = 1;
     int try_send_fd = 1;
@@ -115,7 +115,7 @@ void put(FILE * filedesk, Mensagem * msg){
             reading = 1;
             memset(buffer,0,TAMANHO_MAXIMO);            
             while(reading){
-                resposta = read(fileslave, buffer, TAMANHO_MAXIMO);
+                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
                 if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
                     if(msg.controle.tipo == OK){
@@ -136,9 +136,9 @@ void put(FILE * filedesk, Mensagem * msg){
             printf("Verificação envio: %d\n", resp);
             reading = 1;
             while(reading){
-                resposta = read(fileslave, buffer, TAMANHO_MAXIMO);
+                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
                 recuperaMensagem(&msg, buffer);
-                msg.controle.tipo == OK{
+                if(msg.controle.tipo == OK){
                     try_send_name = 0
                 }else{
                     // calcula novo tempo para enviar o dado
@@ -225,7 +225,7 @@ void put(FILE * filedesk, Mensagem * msg){
             while(reading){
                 resposta = read(fileslave, buffer, TAMANHO_MAXIMO);
                 recuperaMensagem(&msg, buffer);
-                msg.controle.tipo == OK{
+                if(msg.controle.tipo == OK){
                     try_send_fim = 0
                 }else{
                     // calcula novo tempo para enviar o dado
@@ -235,6 +235,101 @@ void put(FILE * filedesk, Mensagem * msg){
             }
         }
     } 
+
+}
+
+void trata_put(FILE *filedesk, Mensagem *first_msg){
+
+    int envio;
+    int resposta;
+    void *buffer;
+    void *buffer0;
+    void *buffer1;
+    void *buffer2;
+    int tmp0,tmp1,tmp2;
+    int min,med,max;
+
+    int send_confirmation_fd = 1;
+    int send_confirmation_name = 1;
+    int wait_for_fd = 1;    
+    int wait_for_data = 1;
+    int status = 1;
+    // lembre-se do free mate
+    char **dados;
+    *dados = malloc(3);
+    *dados[0] = malloc(TAMANHO_MAXIMO);
+    *dados[1] = malloc(TAMANHO_MAXIMO);
+    *dados[2] = malloc(TAMANHO_MAXIMO);
+    Mensagem msg0;
+    Mensagem msg1;
+    Mensagem msg2;
+    msg0.dados = malloc(127);
+    msg1.dados = malloc(127);
+    msg2.dados = malloc(127);
+    buffer0 = malloc(TAMANHO_MAXIMO);
+    buffer1 = malloc(TAMANHO_MAXIMO);
+    buffer2 = malloc(TAMANHO_MAXIMO);
+
+    // tenta criar um arquivo e devolve resposta de sucesso com o nome...
+    (char *) first_msg->dados;
+
+    Mensagem msg;
+    msg.dados = malloc(127);
+    buffer = malloc(TAMANHO_MAXIMO);
+    msg.marcador_inicio = 126;
+    msg.controle.tamanho = 127;
+    msg.controle.sequencia = first_msg->controle.sequencia++;
+    msg.controle.tipo = OK;
+    // strcpy(msg.dados, "Nome do arquivo");
+    msg.crc = 81;
+    defineBuffer(&msg, buffer);
+    while(send_confirmation_name && status){
+    envio = send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
+        while(wait_for_fd){
+            resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+            if(*((unsigned char *)buffer) == 126){
+            recuperaMensagem(&msg, buffer);
+                if(msg.controle.tipo == FD){
+                    wait_for_fd = 0;
+                    send_confirmation_name = 0;
+                }
+            }
+        }
+    }
+
+    // aqui eu ja possui o file desk na mensagem
+    while(send_confirmation_fd && status){
+    envio = send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
+        while(wait_for_data){
+            resposta = read(filedesk, buffer0, TAMANHO_MAXIMO);
+            resposta = read(filedesk, buffer1, TAMANHO_MAXIMO);
+            resposta = read(filedesk, buffer2, TAMANHO_MAXIMO);
+            if(*((unsigned char *)buffer0) == 126 && *((unsigned char *)buffer1) == 126 && *((unsigned char *)buffer2) == 126){
+                recuperaMensagem(&msg0, buffer0);
+                recuperaMensagem(&msg1, buffer1);
+                recuperaMensagem(&msg2, buffer2);
+                int tmp0 = msg0.controle.sequencia;
+                int tmp1 = msg1.controle.sequencia;
+                int tmp2 = msg2.controle.sequencia;                         
+                // ordena os fdp
+                
+
+                // fazer uma comparação entre os buffers em relação ao 
+                // ordenar as mensagens 
+                // se uma das mensagens for de tamanho diferente de 127 isso quer dizer que estou aguardando a mensagem fim e wait_for_data = 0 e send_confirmation_fd = 0
+                // envia ACK E acaba com as mensagens
+            }
+            
+        }
+    }
+
+    
+
+
+
+
+    
+
 
 }
 

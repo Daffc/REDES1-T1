@@ -28,6 +28,10 @@ int main(){
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if(*((unsigned char *)buffer) == 126){
             recuperaMensagem(&msg, buffer);
+
+            if(msg.controle.tipo == PUT){
+                trata_put(filedesk,msg);
+            }
             
             printf("%d\t", msg.marcador_inicio);
             printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
