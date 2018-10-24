@@ -238,6 +238,65 @@ void put(FILE * filedesk, char *name){
 
 }
 
+void ordena(int *min,int *med, int *max){
+
+    int tmp0 = *min;
+    int tmp1 = *med;
+    int tmp2 = *max;
+
+    int medio = tmp1;
+    int maior1 = medio++ % 32;
+    int maior2 = maior1++ % 32;
+    int menor1 = medio-- % 32;
+    int menor2 = menor1-- % 32;
+
+        if(tmp0 == menor1 && tmp2 == maior1){
+            //then sequencia:
+            *min = tmp0;
+            *med = tmp1;
+            *max = tmp2;
+            return;
+        }
+        if(tmp0 == maior1 && tmp2 == menor1){
+            //then sequencia:
+            *min = tmp2;
+            *med = tmp1;
+            *max = tmp0;
+            return;
+        }
+        if(tmp0 == maior1 && tmp2 == maior2){
+            //then sequencia:
+            *min = tmp1;
+            *med = tmp0;
+            *max = tmp2;
+            return;    
+        }
+        if(tmp0 == maior2 && tmp2 == maior1){
+            //then sequencia:
+            *min = tmp1;
+            *med = tmp2;
+            *max = tmp0;
+            return;    
+
+        }
+        if(tmp0 == menor1 && tmp2 == menor2){
+            //then sequencia:
+            *min = tmp2;
+            *med = tmp0;
+            *max = tmp1;
+            return;
+        }
+        if(tmp0 == menor2 && tmp2 == menor1){
+            //then sequencia:
+            *min = tmp0;
+            *med = tmp2;
+            *max = tmp1;
+            return;
+        }
+        printf("Script de ordernar has a breach !!!\n");        
+
+}
+
 void trata_put(FILE *filedesk, Mensagem *first_msg){
 
     int envio;
@@ -248,12 +307,16 @@ void trata_put(FILE *filedesk, Mensagem *first_msg){
     void *buffer2;
     int tmp0,tmp1,tmp2;
     int min,med,max;
-
+    int tam_min,tam_med,tam_max;
+    int min,med,max;
     int send_confirmation_fd = 1;
     int send_confirmation_name = 1;
     int wait_for_fd = 1;    
     int wait_for_data = 1;
     int status = 1;
+    int try_send_ack = 1;
+    int try_send_nack = 1;
+    int wait_for_end = 1;
     // lembre-se do free mate
     char **dados;
     *dados = malloc(3);
@@ -310,28 +373,76 @@ void trata_put(FILE *filedesk, Mensagem *first_msg){
                 recuperaMensagem(&msg2, buffer2);
                 int tmp0 = msg0.controle.sequencia;
                 int tmp1 = msg1.controle.sequencia;
-                int tmp2 = msg2.controle.sequencia;                         
-                // ordena os fdp
-                
+                int tmp2 = msg2.controle.sequencia;
 
-                // fazer uma comparação entre os buffers em relação ao 
-                // ordenar as mensagens 
-                // se uma das mensagens for de tamanho diferente de 127 isso quer dizer que estou aguardando a mensagem fim e wait_for_data = 0 e send_confirmation_fd = 0
-                // envia ACK E acaba com as mensagens
+                // strcpy(dados[0],(char *) msg0.dados);
+                // strcpy(dados[1],(char *) msg1.dados);
+                // strcpy(dados[2],(char *) msg2.dados);
+
+                // verificar com o douglas se precisa de memset
+
+                min = tmp0;
+                med = tmp1;
+                max = tmp2;
+
+                ordena(&min,&med,&max);
+
+                if(min == msg0.controle.sequencia){
+                    // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                }else if(min == msg1.controle.sequencia){
+                    // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                }else{
+                    // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                }
+                if(med == msg0.controle.sequencia){
+                    // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                }else if(med == msg1.controle.sequencia){
+                    // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                }else{
+                    // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                }
+                if(max == msg0.controle.sequencia){
+                    // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                }else if(max == msg1.controle.sequencia){
+                    // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                }else{
+                    // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                }
+                try_send_ack = 1;
+                while(try_send_ack){
+                    envio = send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
+                    // se o ack for sucessful faça o teste abaixo , caso contrario tente enviar o ack
+                    // vou parar quando um dos tamanhos seja != 127
+                    if(msg0.controle.tamanho != 127 || msg0.controle.tamanho != 127 || msg0.controle.tamanho != 127){
+                    // aqui eu tenho que garantir que o ack ou nack tenha sido recebido antes de eu poder setar essas variaveis abaixo                    
+                        wait_for_data = 0;
+                        send_confirmation_fd = 0;
+                    }
+                }                
+                
             }
             
         }
+        // definir quando exatamente manda nack
+        while(try_send_nack){
+            envio = send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
+            // arrumar uma garantia de enviar o nack...
+        }
     }
 
-    
-
-
-
-
-    
-
-
+    while(wait_for_end){
+        resposta = read(filedesk, buffer0, TAMANHO_MAXIMO);
+    }
 }
+
+
+
+// o problema não é eles terem saido ordenado e sim como relacionar com a mensagem em si                
+// ordena as menasgens do capeta
+// fazer uma comparação entre os buffers em relação ao 
+// ordenar as mensagens 
+// se uma das mensagens for de tamanho diferente de 127 isso quer dizer que estou aguardando a mensagem fim e wait_for_data = 0 e send_confirmation_fd = 0
+// envia ACK E acaba com as mensagens
 
 
 
