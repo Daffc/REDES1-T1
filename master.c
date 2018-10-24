@@ -33,7 +33,7 @@ int main(){
     defineBuffer(&msg, buffer);
     
     //NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
-    int resp =  (filedesk, buffer, 4 + msg.controle.tamanho, 0);
+    int resp =  send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
     printf("Verificação envio: %d\n", resp);
     
 
@@ -61,3 +61,4 @@ int main(){
     
     return 0;
 }
+

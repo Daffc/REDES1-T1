@@ -2,6 +2,10 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 void defineBuffer(Mensagem * msg, void * buffer){
@@ -77,7 +81,7 @@ void remote_ls(){
 
 }
 
-void put(FILE * filedesk, char *name){
+void put(int filedesk, char *name){
 
     int try_send_name = 1;
     int try_send_fd = 1;
@@ -108,16 +112,16 @@ void put(FILE * filedesk, char *name){
     msg.crc = 81;
 
 
-    FILE *fd;
+    FILE *fd = NULL;
     fd = fopen(name,"r");
     if(fd == NULL){
         printf("erro ao criar filidescriptor do arquivo : %s \n",name);
         return;
     }
     // recebe o tamanho da mensagem
-    tamanho_da_mensagem = lseek(fd, 0, SEEK_END);
+    tamanho_da_mensagem = fseek(fd, 0, SEEK_END);
     // devolve o ponteiro no inicio do file descriptor
-    lseek(fd, 0, SEEK_SET);
+    rewind(fd);
 
         while(try_send_name){
             // monta mensagem para enviar o nome
@@ -176,7 +180,7 @@ void put(FILE * filedesk, char *name){
             sequencia0 = msg.controle.sequencia;      
             indice = 0;
             while(i <= tamanho_da_mensagem && indice < TAMANHO_MAXIMO){
-                dados[0] = getc(fd);
+                dados[0][indice] = getc(fd);
                 i++;
                 indice++;
             }
@@ -184,7 +188,7 @@ void put(FILE * filedesk, char *name){
             sequencia1 = msg.controle.sequencia++;             
             indice = 0;
             while(i <= tamanho_da_mensagem && indice < TAMANHO_MAXIMO){
-                dados[1] = getc(fd);
+                dados[1][indice] = getc(fd);
                 i++;
                 indice++;
             }
@@ -192,7 +196,7 @@ void put(FILE * filedesk, char *name){
             sequencia2 = msg.controle.sequencia++;
             indice = 0;
             while(i <= tamanho_da_mensagem && indice < TAMANHO_MAXIMO){
-                dados[2] = getc(fd);
+                dados[2][indice] = getc(fd);
                 i++;
                 indice++;
             }
@@ -314,7 +318,7 @@ void ordena(int *min,int *med, int *max){
 
 }
 
-void trata_put(FILE *filedesk, Mensagem *first_msg){
+void trata_put(int filedesk, Mensagem *first_msg){
 
     
     int envio;
@@ -324,7 +328,6 @@ void trata_put(FILE *filedesk, Mensagem *first_msg){
     int tmp0,tmp1,tmp2;
     int min,med,max;
     int tam_min,tam_med,tam_max;
-    int min,med,max;
     int send_confirmation_fd = 1;
     int send_confirmation_name = 1;
     int wait_for_fd = 1;    

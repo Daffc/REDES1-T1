@@ -2,6 +2,8 @@
 #ifndef _Utilidades_
 #define _Utilidades_
 
+#include <stdio.h>
+
     #define TAMANHO_MAXIMO 131    
 
     typedef struct ControleMSG{
@@ -48,7 +50,8 @@
 
     void defineBuffer(Mensagem * msg, void * buffer);
     void recuperaMensagem(Mensagem * msg, void * buffer);  
-    void put(FILE * filedesk, char *name);  
+    void put(int filedesk, char *name);  
+    void trata_put(int filedesk,Mensagem *first_message);
     
 
 #endif

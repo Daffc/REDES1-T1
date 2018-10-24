@@ -8,7 +8,7 @@
 
 
 
-int main(){
+int main(int argc, char *argv[]){
 
     int fileslave;
     int saidaread;
@@ -30,7 +30,7 @@ int main(){
             recuperaMensagem(&msg, buffer);
 
             if(msg.controle.tipo == PUT){
-                trata_put(fileslave,msg);
+                trata_put(fileslave,&msg);
             }
             
             printf("%d\t", msg.marcador_inicio);
