@@ -30,7 +30,7 @@ int main(){
             recuperaMensagem(&msg, buffer);
 
             if(msg.controle.tipo == PUT){
-                trata_put(filedesk,msg);
+                trata_put(fileslave,msg);
             }
             
             printf("%d\t", msg.marcador_inicio);

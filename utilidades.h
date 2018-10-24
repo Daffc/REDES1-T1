@@ -48,7 +48,7 @@
 
     void defineBuffer(Mensagem * msg, void * buffer);
     void recuperaMensagem(Mensagem * msg, void * buffer);  
-    void put(FILE * filedesk, Mensagem * msg);  
+    void put(FILE * filedesk, char *name);  
     
 
 #endif
