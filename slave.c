@@ -30,6 +30,7 @@ int main(int argc, char *argv[]){
             recuperaMensagem(&msg, buffer);
 
             if(msg.controle.tipo == PUT){
+                printf("Iniciando tratamento do put\n");
                 trata_put(fileslave,&msg);
             }
             
@@ -39,7 +40,7 @@ int main(int argc, char *argv[]){
             printf("%d\n", msg.crc);
             
         }   
-        printf("**********************\n");
+        // printf("**********************\n");
     
     }   
     return 0;

@@ -17,45 +17,26 @@ int main(){
 
     filedesk = ConexaoRawSocket("lo");
 
-    buffer = malloc(TAMANHO_MAXIMO);
+    // buffer = malloc(TAMANHO_MAXIMO);
     
-    Mensagem    msg;
-    msg.dados = malloc(127);
+    // Mensagem    msg;
+    // msg.dados = malloc(127);
         
 
-    msg.marcador_inicio = 126;
-    msg.controle.tamanho = 127;
-    msg.controle.sequencia = 15;
-    msg.controle.tipo = 1;
-    strcpy(msg.dados, "Surprise steepest recurred landlord mr wandered amounted of. Continuing devonshire but considered its. Rose past oh shew roof is song neat. Do depend better");
-    msg.crc = 81;
+    // msg.marcador_inicio = 126;
+    // msg.controle.tamanho = 127;
+    // msg.controle.sequencia = 15;
+    // msg.controle.tipo = PUT;
+    // strcpy(msg.dados, "dados");
+    // msg.crc = 81;
 
-    defineBuffer(&msg, buffer);
+    // defineBuffer(&msg, buffer);
+
+    put(filedesk,"dados");
     
     //NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
-    int resp =  send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
-    printf("Verificação envio: %d\n", resp);
-    
-
-    // TESTES COM COMANDOS !!!
-    // while(1){
-    //     // Le linha de comando indicada por usuario.
-    //     scanf(" %99[^\n]", comando);
-
-    //     // Inicializa descritor com resposta do comando indicado.
-    //     fpls = IniciaDescritorComando(comando);
-
-    //         /*Le linha por linha arquivo de resposta do ls aberto e gerencia tratamento*/
-    //         while (fgets(retorno, 127, fpls) != NULL) {
-    //             printf("%s|", retorno);
-    //         }
-
-    //     // Finaliza descritor utilizado.
-    //     FinalizaDescritorComando(fpls);
-    // }  
-
-    // vai ter um while()
-    // case switch para todos os comandos...
+    // int resp =  send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
+    // printf("Verificação envio: %d\n", resp);
 
 
     
