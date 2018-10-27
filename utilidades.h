@@ -52,7 +52,7 @@
     void recuperaMensagem(Mensagem * msg, void * buffer);  
     void put(int filedesk, char *name);  
     void trata_put(int filedesk,Mensagem *first_message);
-    int tamanhoMensagem(Mensagem *msg);
+    int tamanhoMensagem(int i);
     
 
 #endif
