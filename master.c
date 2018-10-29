@@ -15,7 +15,7 @@ int main(){
     void        *buffer;
     FILE        *fpls;
 
-    filedesk = ConexaoRawSocket("lo");
+    filedesk = ConexaoRawSocket("eno1");
 
     // buffer = malloc(TAMANHO_MAXIMO);
     
