@@ -164,7 +164,7 @@ void put(int filedesk, char *name){
             defineBuffer(&msg, buffer);
             // envia a mensagem
             envio = send(filedesk, buffer, 14, 0);
-                    sleep(5);
+                    
             printf("debug:\"Verificação envio do nome do arquivo: %d\n", envio);
 
             // evitar loop infinito
@@ -206,7 +206,7 @@ void put(int filedesk, char *name){
             msg.crc = 81;
             defineBuffer(&msg, buffer);
             envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-                    sleep(5);
+                    
 
             printf("debug:\"Verificação envio do FD: %d\n", envio);
 
@@ -257,7 +257,6 @@ void put(int filedesk, char *name){
             tam2 = indice;
 
             printf("i depois de criar as tres mensagens  =>> %d",i);
-            sleep(3);
             printf("debug:\"Verificação antes de entrar no primeiro loop do envio \n");
             printf("Conteudo da primeira parte da mensagem : %s\n",dados[0]);
             printf("Conteudo da segunda parte da mensagem : %s\n",dados[1]);
@@ -289,7 +288,7 @@ void put(int filedesk, char *name){
                     envio = send(filedesk, buffer0, tamanhoMensagem(tam0), 0);
                     envio = send(filedesk, buffer1, tamanhoMensagem(tam1), 0);
                     envio = send(filedesk, buffer2, tamanhoMensagem(tam2), 0);
-                    sleep(5);
+                    
                     printf("debug:\"Enviei as tres mensagens aguarda status do server : %d\n", envio);
                     reading = 1;
                         while(reading){
@@ -325,7 +324,7 @@ void put(int filedesk, char *name){
             msg.marcador_inicio = 126;
             msg.controle.tipo = FIM;
             envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
-                    sleep(5);
+                    
 
             printf("Verificação envio: %d\n", envio);
             reading = 1;
@@ -443,7 +442,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
         defineBuffer(&msg, buffer);
 
         envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-                    sleep(5);
+                    
 
         printf("debug:\"Verificação envio da confirmação do nome: %d\n", envio);
         wait_for_fd = 1;
@@ -475,7 +474,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
         defineBuffer(&msg, buffer);
 
     envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-                    sleep(5);
+                    
 
         wait_for_data = 1;
         while(wait_for_data){
@@ -494,7 +493,6 @@ void trata_put(int filedesk, Mensagem *first_msg){
                     printf("%d\t%d\t%d\t", msgs[cont].controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
                     printf("%s\t", (char *)msgs[cont].dados); 
                     printf("%d\n", msgs[cont].crc);
-                    sleep(1);
                     cont++;
                 }
                 memset(buffer0,0,TAMANHO_MAXIMO);
@@ -516,7 +514,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                     msg.controle.tipo = NACK;
                     defineBuffer(&msg, buffer);
                     envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-                    sleep(5);
+                    
                     try_send_nack = 0;
                 }
             }else if(msgs[0].controle.tipo == DADOS && msgs[1].controle.tipo == DADOS && msgs[2].controle.tipo == DADOS){
@@ -569,7 +567,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                     defineBuffer(&msg, buffer);                    
                     printf("tenta enviar ack\n");
                     envio = send(filedesk, buffer,tamanhoMensagem(msg.controle.tamanho), 0);
-                    sleep(5);                    
+                                        
                     // se o ack for sucessful faça o teste abaixo , caso contrario tente enviar o ack
                     // vou parar quando um dos tamanhos seja != 127
                     try_send_ack = 0;
@@ -580,7 +578,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     while(wait_for_end){
         msg.controle.tipo = FIM;
         envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-        sleep(5);
+        
         wait_for_end = 0;
     }
     printf("Saindo da função trata_put\n");
