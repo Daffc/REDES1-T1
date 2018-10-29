@@ -356,10 +356,10 @@ int ordena(int *min,int *med, int *max){
     int tmp2 = *max;
 
     int medio = tmp1;
-    int maior1 = medio++ % 32;
-    int maior2 = maior1++ % 32;
-    int menor1 = medio-- % 32;
-    int menor2 = menor1-- % 32;
+    int maior1 = (medio + 1) % 32;
+    int maior2 = (maior1 + 1) % 32;
+    int menor1 = (medio - 1) % 32;
+    int menor2 = (menor1 - 1)  % 32;
 
         if(tmp0 == menor1 && tmp2 == maior1){
             *min = tmp0;
@@ -548,7 +548,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
         // criar um temporizador e renviar a mensagem
         // mensagens de confirmação sempre tem o tamanho 1
         printf("enviando mensagem ao cliente\n");
-        envio = send(filedesk, buffer_send, tamanhoMensagem(sizeof(OK)), 0);        
+        envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);        
     }
     printf("saindo do put\n");
 }
