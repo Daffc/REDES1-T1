@@ -34,11 +34,12 @@ int main(int argc, char *argv[]){
                 trata_put(fileslave,&msg);
             }
             
-            printf("%d\t", msg.marcador_inicio);
-            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            printf("%s\t", (char *)msg.dados); 
-            printf("%d\n", msg.crc);
-            
+            // printf("%d\t", msg.marcador_inicio);
+            // printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            // printf("%s\t", (char *)msg.dados); 
+            // printf("%d\n", msg.crc);
+            printf("GAAAAAAAAAAAAAAME OOOOOOOOOOOOVER\n");
+            exit(0);
         }   
         // printf("**********************\n");
     

@@ -217,10 +217,12 @@ void put(int filedesk, char *name){
                     if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
                     if(msg.controle.tipo == OK){
+                        reading = 0;
                         try_send_fd = 0;
                     }else{
                         // calcula novo tempo para enviar o dado
-                        reading = 0;
+                        // reading = 0;
+                        // return;
                     }
                 }
                 *((unsigned char *)buffer) = 0;
@@ -323,6 +325,7 @@ void put(int filedesk, char *name){
         while(try_send_fim){
             msg.marcador_inicio = 126;
             msg.controle.tipo = FIM;
+            defineBuffer(&msg, buffer);
             envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
 
 
@@ -442,7 +445,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
 
     msg.marcador_inicio = 126;
     msg.controle.tamanho = 1;
-    msg.controle.sequencia = last_seq + 1;
+    msg.controle.sequencia = 10;
     msg.controle.tipo = OK;
     msg.crc = 81;
     defineBuffer(&msg, buffer_send);
@@ -450,11 +453,18 @@ void trata_put(int filedesk, Mensagem *first_msg){
 
     while(main_loop){
         resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+        printf("tamanho da mensagem recebida  %d\n ",resposta);
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
                 case FD:
                     printf("Recebi FD\n");
+                    msg.marcador_inicio = 126;
+                    msg.controle.tamanho = 1;
+                    msg.controle.sequencia = 11;
+                    msg.controle.tipo = OK;
+                    msg.crc = 81;
+                    defineBuffer(&msg, buffer_send);
                     // adiciona o file descriptor ...
                     // em todo caso para teste ira enviar ok
                 break;
@@ -532,12 +542,15 @@ void trata_put(int filedesk, Mensagem *first_msg){
                     main_loop = 0;
                 break;
             }
-        }else{
-            // criar um temporizador e renviar a mensagem
-            // mensagens de confirmação sempre tem o tamanho 1
-            envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
+            *((unsigned char *)buffer_read) = 0;
+            printf("sai do case/switch\n");
         }
+        // criar um temporizador e renviar a mensagem
+        // mensagens de confirmação sempre tem o tamanho 1
+        printf("enviando mensagem ao cliente\n");
+        envio = send(filedesk, buffer_send, tamanhoMensagem(sizeof(OK)), 0);        
     }
+    printf("saindo do put\n");
 }
 
 
