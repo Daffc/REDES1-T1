@@ -116,7 +116,7 @@ void put(int filedesk, char *name){
     char **dados;
 
     dados = malloc(3);
-
+    //
     dados[0] = malloc(TAMANHO_MAXIMO);
     dados[1] = malloc(TAMANHO_MAXIMO);
     dados[2] = malloc(TAMANHO_MAXIMO);
