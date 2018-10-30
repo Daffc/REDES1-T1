@@ -483,45 +483,27 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         if(try){
 
                             if(min == msgs[0].controle.sequencia){
-                                write(fd,(char *) msgs[0].dados,msgs[0].controle.tamanho);
-                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[0].dados);
-                                // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
                             }else if(min == msgs[1].controle.sequencia){
-                                write(fd,(char *) msgs[1].dados,msgs[1].controle.tamanho);
-                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[1].dados);
-                                // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
                             }else{
-                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
-                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[2].dados);
-                                // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
                             }
 
                             if(med == msgs[0].controle.sequencia){
-                                write(fd,(char *) msgs[0].dados,msgs[0].controle.tamanho);
-                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[0].dados);
-                                // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
                             }else if(med == msgs[1].controle.sequencia){
-                                write(fd,(char *) msgs[1].dados,msgs[1].controle.tamanho);
-                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[1].dados);
-                                // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
                             }else{
-                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
-                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[2].dados);
-                                // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
                             }
 
                             if(max == msgs[0].controle.sequencia){
-                                write(fd,(char *) msgs[2].dados,msgs[0].controle.tamanho);
-                                // printf("Dado adicionado no 3°: %s\n",(char *) msgs[0].dados);
-                                // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
                             }else if(max == msgs[1].controle.sequencia){
-                                write(fd,(char *) msgs[2].dados,msgs[1].controle.tamanho);
-                                // printf("Dado adicionado no 3°: %s\n",(char *) msgs[1].dados);
-                                // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
                             }else{
-                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
-                                // printf("Dado adicionado no 3° : %s\n",(char *) msgs[2].dados);
-                                // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
                             }
 
                             msg.marcador_inicio = 126;
