@@ -483,43 +483,43 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         if(try){
 
                             if(min == msgs[0].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[0].dados);
+                                write(fd,(char *) msgs[0].dados,msgs[0].controle.tamanho);
                                 // printf("Dado adicionado no 1°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(min == msgs[1].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[1].dados);
+                                write(fd,(char *) msgs[1].dados,msgs[1].controle.tamanho);
                                 // printf("Dado adicionado no 1°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
                                 // printf("Dado adicionado no 1°: %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
 
                             if(med == msgs[0].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[0].dados);
+                                write(fd,(char *) msgs[0].dados,msgs[0].controle.tamanho);
                                 // printf("Dado adicionado no 2°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(med == msgs[1].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[1].dados);
+                                write(fd,(char *) msgs[1].dados,msgs[1].controle.tamanho);
                                 // printf("Dado adicionado no 2°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
                                 // printf("Dado adicionado no 2°: %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
 
                             if(max == msgs[0].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                write(fd,(char *) msgs[2].dados,msgs[0].controle.tamanho);
                                 // printf("Dado adicionado no 3°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(max == msgs[1].controle.sequencia){
-                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                write(fd,(char *) msgs[2].dados,msgs[1].controle.tamanho);
                                 // printf("Dado adicionado no 3°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                write(fd,(char *) msgs[2].dados,msgs[2].controle.tamanho);
                                 // printf("Dado adicionado no 3° : %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
