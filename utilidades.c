@@ -181,7 +181,7 @@ void put(int filedesk, char *name){
                         reading = 0;
                     }else if(msg.controle.tipo == ERRO){
                         // Arrumar uma maneira de arrumar isso
-                        printf("Ocorreu um erro : %s",(char *) msg.dados);
+                        printf("Ocorreu um erro : %s\n",(char *) msg.dados);
                         return;
                     }else{    
                         // calcula novo tempo para enviar o dado
@@ -217,6 +217,9 @@ void put(int filedesk, char *name){
                     if(msg.controle.tipo == OK){
                         reading = 0;
                         try_send_fd = 0;
+                    }else if(msg.controle.tipo == ERRO){
+                        printf("Ocorreu um erro : %s\n",(char *) msg.dados);
+                        return;
                     }else{
                         // calcula novo tempo para enviar o dado
                         // reading = 0;
