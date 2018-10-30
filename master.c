@@ -15,7 +15,7 @@ int main(){
     void        *buffer;
     FILE        *fpls;
 
-    filedesk = ConexaoRawSocket("lo");
+    filedesk = ConexaoRawSocket("eno1");
 
     // buffer = malloc(TAMANHO_MAXIMO);
     
@@ -38,7 +38,7 @@ int main(){
     // int resp =  send(filedesk, buffer, 4 + msg.controle.tamanho, 0);
     // printf("Verificação envio: %d\n", resp);
 
-
+    
     
     return 0;
 }

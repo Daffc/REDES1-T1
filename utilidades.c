@@ -400,6 +400,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     int min,med,max;
     int cont = 0;
     int sizeofmessage;
+    char *name;
     // lembre-se do free mate
 
     // tenta criar um arquivo e devolve resposta de sucesso com o nome...
@@ -413,7 +414,18 @@ void trata_put(int filedesk, Mensagem *first_msg){
 
     last_seq = first_msg->controle.sequencia;
 
-    check_error = access((char *) first_msg->dados, R_OK || W_OK);
+    strcpy(name,(char *) first_msg->dados);
+
+    FILE *fd = NULL;
+    fd = fopen(name,"w");
+    if(fd == NULL){
+        printf("erro ao criar fd do arquivo : %s \n",name);
+        printf("mensagem de erro : %s", strerror(errno));
+        return;
+    }
+
+    check_error = access(name, W_OK);
+
     printf("check_error : %d",check_error);
     printf("what happened : %s\n",strerror(errno));
     if(check_error){
@@ -471,35 +483,44 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         if(try){
 
                             if(min == msgs[0].controle.sequencia){
-                                printf("Dado adicionado no 1°: %s\n",(char *) msgs[0].dados);
+                                fprintf(fd,"%s",(char *) msgs[0].dados);
+                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(min == msgs[1].controle.sequencia){
-                                printf("Dado adicionado no 1°: %s\n",(char *) msgs[1].dados);
+                                fprintf(fd,"%s",(char *) msgs[1].dados);
+                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                printf("Dado adicionado no 1°: %s\n",(char *) msgs[2].dados);
+                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                // printf("Dado adicionado no 1°: %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
 
                             if(med == msgs[0].controle.sequencia){
-                                printf("Dado adicionado no 2°: %s\n",(char *) msgs[0].dados);
+                                fprintf(fd,"%s",(char *) msgs[0].dados);
+                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(med == msgs[1].controle.sequencia){
-                                printf("Dado adicionado no 2°: %s\n",(char *) msgs[1].dados);
+                                fprintf(fd,"%s",(char *) msgs[1].dados);
+                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                printf("Dado adicionado no 2°: %s\n",(char *) msgs[2].dados);
+                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                // printf("Dado adicionado no 2°: %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
 
                             if(max == msgs[0].controle.sequencia){
-                                printf("Dado adicionado no 3°: %s\n",(char *) msgs[0].dados);
+                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                // printf("Dado adicionado no 3°: %s\n",(char *) msgs[0].dados);
                                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
                             }else if(max == msgs[1].controle.sequencia){
-                                printf("Dado adicionado no 3°: %s\n",(char *) msgs[1].dados);
+                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                // printf("Dado adicionado no 3°: %s\n",(char *) msgs[1].dados);
                                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
                             }else{
-                                printf("Dado adicionado no 3° : %s\n",(char *) msgs[2].dados);
+                                fprintf(fd,"%s",(char *) msgs[2].dados);
+                                // printf("Dado adicionado no 3° : %s\n",(char *) msgs[2].dados);
                                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
                             }
 
