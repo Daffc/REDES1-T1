@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <sys/stat.h>
 // #include <sys/stat.h>
 
 int tamanhoMensagem(int i){
@@ -103,6 +104,13 @@ void put(int filedesk, char *name){
         return;
     }
 
+    struct stat path_stat;
+    stat(name, &path_stat);
+    if(!S_ISREG(path_stat.st_mode)){
+            printf("Erro arquivo invalido : TIPO\n");
+        return;
+    }  
+
     int try_send_name = 1;
     int try_send_fd = 1;
     int try_send_data = 1;
@@ -183,7 +191,7 @@ void put(int filedesk, char *name){
                         // Arrumar uma maneira de arrumar isso
                         printf("Ocorreu um erro : %s\n",(char *) msg.dados);
                         return;
-                    }else{    
+                    }else{
                         // calcula novo tempo para enviar o dado
                         reading = 0;
                     }
@@ -200,9 +208,9 @@ void put(int filedesk, char *name){
 
             // monta mensagem para enviar file descriptor
             msg.marcador_inicio = 126;
-            msg.controle.tamanho = 20;
+            msg.controle.tamanho = 19;
             msg.controle.sequencia = last_seq;
-            strcpy(msg.dados,"tamanho da mensagem");
+            *((int *) msg.dados) = tamanho_da_mensagem;
             msg.controle.tipo = FD;
             msg.crc = 81;
             defineBuffer(&msg, buffer);
@@ -230,12 +238,14 @@ void put(int filedesk, char *name){
             }
         }
 
+        memset(buffer,0,TAMANHO_MAXIMO);
+
         int i = 0;
         while(has_data_to_sent){
 
             sequencia0 = msg.controle.sequencia;
             indice = 0;
-            while(i <= tamanho_da_mensagem && indice < 127){
+            while(i < tamanho_da_mensagem && indice < 127){
                 dados[0][indice] = getc(fd);
                 i++;
                 indice++;
@@ -243,7 +253,7 @@ void put(int filedesk, char *name){
             tam0 = indice;
             sequencia1 = sequencia0 + 1;
             indice = 0;
-            while(i <= tamanho_da_mensagem && indice < 127){
+            while(i < tamanho_da_mensagem && indice < 127){
                 dados[1][indice] = getc(fd);
                 i++;
                 indice++;
@@ -251,7 +261,7 @@ void put(int filedesk, char *name){
             tam1 = indice;
             sequencia2 = sequencia1 + 1;
             indice = 0;
-            while(i <= tamanho_da_mensagem && indice < 127){
+            while(i < tamanho_da_mensagem && indice < 127){
                 dados[2][indice] = getc(fd);
                 i++;
                 indice++;
@@ -387,6 +397,7 @@ int ordena(int *min,int *med, int *max){
 void trata_put(int filedesk, Mensagem *first_msg){
 
     printf("iniciando put ... \n");
+    int check_file = 0;
     int check_error = 0;
     int envio;
     int resposta;
@@ -425,9 +436,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     }
 
     check_error = access(name, W_OK);
-
-    printf("check_error : %d",check_error);
-    printf("what happened : %s\n",strerror(errno));
+    
     if(check_error){
         msg.controle.tipo = ERRO;
         strcpy(msg.dados,"PERMICAO");
@@ -438,8 +447,9 @@ void trata_put(int filedesk, Mensagem *first_msg){
         msg.controle.tamanho = 1;
     }
 
-    msg.marcador_inicio = 126;    
-    msg.controle.sequencia = 10;    
+
+    msg.marcador_inicio = 126;
+    msg.controle.sequencia = 10;
     msg.crc = 81;
     defineBuffer(&msg, buffer_send);
     envio = send(filedesk, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -452,6 +462,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                 case FD:
                     // sizeofmessage = (int *) msgs[0].dados;
                     // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
+                    sizeofmessage = *((int *) msg.dados);
                     msg.marcador_inicio = 126;
                     msg.controle.tamanho = 1;
                     msg.controle.sequencia = 11;
@@ -526,7 +537,8 @@ void trata_put(int filedesk, Mensagem *first_msg){
                     main_loop = 0;
                 break;
             }
-            *((unsigned char *)buffer_read) = 0;
+            // *((unsigned char *)buffer_read) = 0;
+
             printf("sai do case/switch\n");
         }
         // criar um temporizador e renviar a mensagem
