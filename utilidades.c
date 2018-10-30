@@ -339,8 +339,8 @@ int ordena(int *min,int *med, int *max){
     int maior2 = (maior1 + 1) % 32;
     int menor1 = (medio - 1) % 32;
     int menor2 = (menor1 - 1)  % 32;
-    printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
-    printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
+    // printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
+    // printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
 
         if(tmp0 == menor1 && tmp2 == maior1){
             *min = tmp0;
