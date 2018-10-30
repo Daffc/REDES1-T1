@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
     int saidaread;
     int estado, estado2;
     void *buffer;
-    fileslave = ConexaoRawSocket("eno1");
+    fileslave = ConexaoRawSocket("lo");
 
     Mensagem    msg;
     msg.dados = malloc(127);

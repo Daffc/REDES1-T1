@@ -43,8 +43,8 @@
 
     enum Erros{
         NONE6,
-        INEXISTENTE,
-        PERMICAO,
+        INEXISTENTE, // access(const char *pathname, F_OK);
+        PERMICAO, // access(const char *pathname, R_OK || W_OK);
         QUOTA,
     };
 

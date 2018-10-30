@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 // #include <sys/stat.h>
 
 int tamanhoMensagem(int i){
@@ -94,6 +95,14 @@ void remote_ls(){
 void put(int filedesk, char *name){
 
 
+
+    int check_file;
+    check_file = access(name,F_OK);
+    if( errno == ENOENT){
+        printf("No such file or directory \n");
+        return;
+    }
+
     int try_send_name = 1;
     int try_send_fd = 1;
     int try_send_data = 1;
@@ -116,7 +125,6 @@ void put(int filedesk, char *name){
     char **dados;
 
     dados = malloc(3);
-    //
     dados[0] = malloc(TAMANHO_MAXIMO);
     dados[1] = malloc(TAMANHO_MAXIMO);
     dados[2] = malloc(TAMANHO_MAXIMO);
@@ -126,18 +134,11 @@ void put(int filedesk, char *name){
     buffer2 = malloc(TAMANHO_MAXIMO);
     Mensagem    msg;
     msg.dados = malloc(127);
-    msg.marcador_inicio = 126;
-    msg.controle.tamanho = strlen(name) + 1;
-
-
-
-
-
 
     FILE *fd = NULL;
     fd = fopen(name,"r");
     if(fd == NULL){
-        printf("erro ao criar filidescriptor do arquivo : %s \n",name);
+        printf("erro ao criar fd do arquivo : %s \n",name);
         return;
     }
     // recebe o tamanho da mensagem
@@ -151,6 +152,7 @@ void put(int filedesk, char *name){
     rewind(fd);
 
         last_seq = msg.controle.sequencia;
+        last_seq += 1;
 
 
         while(try_send_name){
@@ -165,25 +167,24 @@ void put(int filedesk, char *name){
             // envia a mensagem
             envio = send(filedesk, buffer, 14, 0);
 
-            printf("debug:\"Verificação envio do nome do arquivo: %d\n", envio);
-
-            // evitar loop infinito
             *((unsigned char *)buffer) = 0;
-            // inicio de processo para aguardar OK ou reenviar a o nome
+
             reading = 1;
-            // memset(buffer,0,TAMANHO_MAXIMO);
+
             while(reading){
                 resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
                 if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
                     // sucesso ao receber o ok do servidor
                     if(msg.controle.tipo == OK){
-                        printf("debug:\"Mensagem recebida pelo servidor\n");
                         try_send_name = 0;
                         reading = 0;
-                    }else{
+                    }else if(msg.controle.tipo == ERRO){
+                        // Arrumar uma maneira de arrumar isso
+                        printf("Ocorreu um erro : %s",(char *) msg.dados);
+                        return;
+                    }else{    
                         // calcula novo tempo para enviar o dado
-                        printf("debug:\"Mensagem não recebida pelo servidor envia novamente\n");
                         reading = 0;
                     }
                     // evitar loop infinito
@@ -199,16 +200,13 @@ void put(int filedesk, char *name){
 
             // monta mensagem para enviar file descriptor
             msg.marcador_inicio = 126;
-            msg.controle.tamanho = 1;
+            msg.controle.tamanho = 20;
             msg.controle.sequencia = last_seq;
+            strcpy(msg.dados,"tamanho da mensagem");
             msg.controle.tipo = FD;
-            strcpy(msg.dados, name);
             msg.crc = 81;
             defineBuffer(&msg, buffer);
             envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-
-            printf("debug:\"Verificação envio do FD: %d\n", envio);
 
             reading = 1;
 
@@ -229,7 +227,6 @@ void put(int filedesk, char *name){
             }
         }
 
-        //
         int i = 0;
         while(has_data_to_sent){
 
@@ -258,63 +255,46 @@ void put(int filedesk, char *name){
             }
             tam2 = indice;
 
-            printf("i depois de criar as tres mensagens  =>> %d",i);
-            printf("debug:\"Verificação antes de entrar no primeiro loop do envio \n");
-            printf("Conteudo da primeira parte da mensagem : %s\n",dados[0]);
-            printf("Conteudo da segunda parte da mensagem : %s\n",dados[1]);
-            printf("Conteudo da terceira parte da mensagem : %s\n",dados[2]);
-
-                    msg.marcador_inicio = 126;
-                    msg.controle.tipo = DADOS;
-                    msg.controle.sequencia = sequencia0;
-                    msg.controle.tamanho = tam0;
-                    strcpy(msg.dados,dados[0]);
-                    defineBuffer(&msg, buffer0);
-                    printf("debug:\"Cria a primeira mensagem\n");
-                    msg.controle.sequencia = sequencia1;
-                    msg.controle.tamanho = tam1;
-                    strcpy(msg.dados,dados[1]);
-                    defineBuffer(&msg, buffer1);
-                    printf("debug:\"Cria a segunda mensagem\n");
-                    msg.controle.sequencia = sequencia2;
-                    msg.controle.tamanho = tam2;
-                    strcpy(msg.dados,dados[2]);
-                    defineBuffer(&msg, buffer2);
-                    printf("debug:\"Cria a terceira mensagem\n");
+                msg.marcador_inicio = 126;
+                msg.controle.tipo = DADOS;
+                msg.controle.sequencia = sequencia0;
+                msg.controle.tamanho = tam0;
+                strcpy(msg.dados,dados[0]);
+                defineBuffer(&msg, buffer0);
+                msg.controle.sequencia = sequencia1;
+                msg.controle.tamanho = tam1;
+                strcpy(msg.dados,dados[1]);
+                defineBuffer(&msg, buffer1);
+                msg.controle.sequencia = sequencia2;
+                msg.controle.tamanho = tam2;
+                strcpy(msg.dados,dados[2]);
+                defineBuffer(&msg, buffer2);
 
                 try_send_data = 1;
 
                 while(try_send_data){
-                    printf("tamanhos enviados %d,%d,%d",tam0,tam1,tam2);
-                    printf("sequencias enviadas %d,%d,%d",sequencia0,sequencia1,sequencia2);
+
                     envio = send(filedesk, buffer0, tamanhoMensagem(tam0), 0);
                     envio = send(filedesk, buffer1, tamanhoMensagem(tam1), 0);
                     envio = send(filedesk, buffer2, tamanhoMensagem(tam2), 0);
 
-                    printf("debug:\"Enviei as tres mensagens aguarda status do server : %d\n", envio);
                     reading = 1;
                         while(reading){
                             resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
                             if(*((unsigned char *)buffer) == 126){
-                                printf("controle da variavel que itera arquivo i : %d\n",i);
-                                printf("recebi mensagem do servidor tratar...\n");
                                 recuperaMensagem(&msg, buffer);
-                                printf("%d\n",msg.controle.tipo);
                             if(msg.controle.tipo == ACK){
                                 reading = 0;
                                 try_send_data = 0;
-                                printf("mensagem do tipo ack bro vai para proxima");
                                 // incrementa a sequencia em tres somente após a garantia que enviei as tres
                                 msg.controle.sequencia = (msg.controle.sequencia + 3);
                             }
                             if(msg.controle.tipo == NACK){
                                 reading = 0;
-                                printf("mensagem do tipo nack bro envia novamente");
                             }
                             // calcula temporização aqui tambem
                         }
                         *((unsigned char *)buffer) = 0;
-                        printf("Aguardando resposta do servidor... \n");
                 }
                 if(i >= tamanho_da_mensagem){
                     has_data_to_sent = 0;
@@ -322,30 +302,26 @@ void put(int filedesk, char *name){
             }
         }
 
-        while(try_send_fim){
-            msg.marcador_inicio = 126;
-            msg.controle.tipo = FIM;
-            defineBuffer(&msg, buffer);
+        msg.marcador_inicio = 126;
+        msg.controle.tipo = FIM;
+        defineBuffer(&msg, buffer);
+        int temp = 0;
+        // tenta enviar mensagem de fim 5 vezes
+        while(temp < 5){
             envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
-
-
-            printf("Verificação envio: %d\n", envio);
-            reading = 1;
-            while(reading){
-                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-                if(*((unsigned char *)buffer) == 126){
-                    recuperaMensagem(&msg, buffer);
-                    if(msg.controle.tipo == OK){
-                        try_send_fim = 0;
-                    }else{
-                        // calcula novo tempo para enviar o dado
-                        reading = 0;
-                        // e envia novamente
-                    }
-                *((unsigned char *)buffer) = 0;
-                }
-            }
+            temp++;
         }
+
+
+    free(dados[0]);
+    free(dados[1]);
+    free(dados[2]);
+    free(dados);
+    free(buffer);
+    free(buffer0);
+    free(buffer1);
+    free(buffer2);
+    free(msg.dados);
 
 }
 
@@ -360,6 +336,8 @@ int ordena(int *min,int *med, int *max){
     int maior2 = (maior1 + 1) % 32;
     int menor1 = (medio - 1) % 32;
     int menor2 = (menor1 - 1)  % 32;
+    printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
+    printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
 
         if(tmp0 == menor1 && tmp2 == maior1){
             *min = tmp0;
@@ -406,10 +384,9 @@ int ordena(int *min,int *med, int *max){
 void trata_put(int filedesk, Mensagem *first_msg){
 
     printf("iniciando put ... \n");
+    int check_error = 0;
     int envio;
     int resposta;
-    void *buffer;
-    void *buffer0;
     // esse buffer fica responsavel por enviar sempre a ultima resposta
     void *buffer_send;
     // esse buffer fica reponsavel por receber os dados do cliente
@@ -417,48 +394,49 @@ void trata_put(int filedesk, Mensagem *first_msg){
     // controla o loop principal
     int main_loop = 1;
     int last_seq;
-    int tmp0,tmp1,tmp2;
     int min,med,max;
-    int send_confirmation_fd = 1;
-    int send_confirmation_name = 1;
-    int wait_for_fd = 1;
-    int wait_for_data = 1;
-    int status = 1;
-    int try_send_ack = 1;
-    int try_send_nack = 1;
-    int wait_for_end = 1;
     int cont = 0;
+    int sizeofmessage;
     // lembre-se do free mate
-    buffer0 = malloc(TAMANHO_MAXIMO);
-    // tenta criar um arquivo e devolve resposta de sucesso com o nome...
 
+    // tenta criar um arquivo e devolve resposta de sucesso com o nome...
     Mensagem msg,msgs[3];
     msgs[0].dados = malloc(TAMANHO_MAXIMO);
     msgs[1].dados = malloc(TAMANHO_MAXIMO);
     msgs[2].dados = malloc(TAMANHO_MAXIMO);
     msg.dados = malloc(TAMANHO_MAXIMO);
-    buffer = malloc(TAMANHO_MAXIMO);
     buffer_send = malloc(TAMANHO_MAXIMO);
     buffer_read = malloc(TAMANHO_MAXIMO);
 
     last_seq = first_msg->controle.sequencia;
 
-    msg.marcador_inicio = 126;
-    msg.controle.tamanho = 1;
-    msg.controle.sequencia = 10;
-    msg.controle.tipo = OK;
+    check_error = access((char *) first_msg->dados, R_OK || W_OK);
+    printf("check_error : %d",check_error);
+    printf("what happened : %s\n",strerror(errno));
+    if(check_error){
+        msg.controle.tipo = ERRO;
+        strcpy(msg.dados,"PERMICAO");
+        msg.controle.tamanho = 9;
+        main_loop = 0;
+    }else{
+        msg.controle.tipo = OK;
+        msg.controle.tamanho = 1;
+    }
+
+    msg.marcador_inicio = 126;    
+    msg.controle.sequencia = 10;    
     msg.crc = 81;
     defineBuffer(&msg, buffer_send);
     envio = send(filedesk, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
 
     while(main_loop){
         resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
-        printf("tamanho da mensagem recebida  %d\n ",resposta);
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
                 case FD:
-                    printf("Recebi FD\n");
+                    // sizeofmessage = (int *) msgs[0].dados;
+                    // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
                     msg.marcador_inicio = 126;
                     msg.controle.tamanho = 1;
                     msg.controle.sequencia = 11;
@@ -548,182 +526,17 @@ void trata_put(int filedesk, Mensagem *first_msg){
         // criar um temporizador e renviar a mensagem
         // mensagens de confirmação sempre tem o tamanho 1
         printf("enviando mensagem ao cliente\n");
-        envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);        
+        envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
     }
     printf("saindo do put\n");
+
+    free(msgs[0].dados);
+    free(msgs[1].dados);
+    free(msgs[2].dados);
+    free(msg.dados);
+    free(buffer_send);
+    free(buffer_read);
 }
-
-
-
-
-
-
-
-    // while( send_confirmation_name ){
-
-    //     msg.marcador_inicio = 126;
-    //     msg.controle.tamanho = 1;
-    //     msg.controle.sequencia = last_seq + 1;
-    //     // assumindo que eu posso criar o arquivo para debug
-    //     msg.controle.tipo = OK;
-    //     msg.crc = 81;
-    //     defineBuffer(&msg, buffer);
-    //     envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-
-    //     printf("debug:\"Verificação envio da confirmação do nome: %d\n", envio);
-    //     wait_for_fd = 1;
-    //     while(wait_for_fd){
-    //         resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-    //         if(*((unsigned char *)buffer) == 126){
-    //         recuperaMensagem(&msg, buffer);
-    //             if(msg.controle.tipo == FD){
-    //                 wait_for_fd = 0;
-    //                 send_confirmation_name = 0;
-    //             }else{
-    //                 wait_for_fd = 0;
-    //             }
-    //         }
-    //         *((unsigned char *)buffer) = 0;
-    //     }
-    // }
-
-    // last_seq = msg.controle.sequencia++;
-
-    // while(send_confirmation_fd){
-        // trata os dados que foram recebido e são FD
-        // msg.marcador_inicio = 126;
-        // msg.controle.tamanho = 1;
-        // msg.controle.sequencia = last_seq;
-        // assumindo que eu posso criar o arquivo para debug
-        // msg.controle.tipo = OK;
-        // msg.crc = 81;
-        // defineBuffer(&msg, buffer);
-
-    // envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-
-        // wait_for_data = 1;
-        // while(wait_for_data){
-        //     cont = 0;
-        //     while(cont < 3){
-        //         resposta = read(filedesk, buffer0, TAMANHO_MAXIMO);
-        //         if(*((unsigned char *)buffer0) == 126){
-        //             recuperaMensagem(&msgs[cont], buffer0);
-        //             printf("recebi a mensagem numero %d\n",cont);
-        //             if(msgs[cont].controle.tipo == FIM){
-        //                 wait_for_data = 0;
-        //                 send_confirmation_fd = 0;
-        //             }
-                    // printf("cont : %d\n",cont);
-                    // printf("%d\t", msgs[cont].marcador_inicio);
-                    // printf("%d\t%d\t%d\t", msgs[cont].controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-                    // printf("%s\t", (char *)msgs[cont].dados);
-                    // printf("%d\n", msgs[cont].crc);
-                //     cont++;
-                // }
-                // memset(buffer0,0,TAMANHO_MAXIMO);
-                // if(cont == 3){
-                //     send_confirmation_fd = 0;
-                //     printf("Aguardando por dados \n");
-                // }else{
-                //     // pensar em algo para tratar o fd
-                //     // e colocar wait_for_data = 0;
-                // }
-                // printf("Aguardando por dados \n");
-            // }
-            // printf("Tenho os 3 dados agora irei trata-los\n");
-            // printf("sequencias recebidas %d,%d,%d\n",msgs[0].controle.sequencia,msgs[1].controle.tipo,msgs[2].controle.sequencia);
-            // if(msgs[0].controle.sequencia == msgs[1].controle.tipo || msgs[0].controle.sequencia == msgs[2].controle.sequencia || msgs[1].controle.sequencia == msgs[2].controle.sequencia ){
-            //     printf("enviando nack e esperando pelas algum dos indices repetidos\n");
-            //     try_send_nack = 1;
-            //     while(try_send_nack){
-            //         msg.controle.tipo = NACK;
-            //         defineBuffer(&msg, buffer);
-            //         envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-            //         try_send_nack = 0;
-            //     }
-    //         }else if(msgs[0].controle.tipo == DADOS && msgs[1].controle.tipo == DADOS && msgs[2].controle.tipo == DADOS){
-    //             printf("Dados recebidos tratando them \n");
-    //             // faz o CRC bolado antes de tratar as mensagens e se for tenta enviar o nack
-
-    //             int tmp0 = msgs[0].controle.sequencia;
-    //             int tmp1 = msgs[1].controle.sequencia;
-    //             int tmp2 = msgs[2].controle.sequencia;
-
-    //             min = tmp0;
-    //             med = tmp1;
-    //             max = tmp2;
-
-    //             ordena(&min,&med,&max);
-    //             if(min == msgs[0].controle.sequencia){
-    //                 printf("Dado adicionado no 1°: %s\n",(char *) msgs[0].dados);
-    //                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
-    //             }else if(min == msgs[1].controle.sequencia){
-    //                 printf("Dado adicionado no 1°: %s\n",(char *) msgs[1].dados);
-    //                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
-    //             }else{
-    //                 printf("Dado adicionado no 1°: %s\n",(char *) msgs[2].dados);
-    //                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
-    //             }
-    //             if(med == msgs[0].controle.sequencia){
-    //                 printf("Dado adicionado no 2°: %s\n",(char *) msgs[0].dados);
-    //                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
-    //             }else if(med == msgs[1].controle.sequencia){
-    //                 printf("Dado adicionado no 2°: %s\n",(char *) msgs[1].dados);
-    //                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
-    //             }else{
-    //                 printf("Dado adicionado no 2°: %s\n",(char *) msgs[2].dados);
-    //                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
-    //             }
-    //             if(max == msgs[0].controle.sequencia){
-    //                 printf("Dado adicionado no 3°: %s\n",(char *) msgs[0].dados);
-    //                 // adiciona (char *) msg0.dados de tamanho msg0.controle.tamanho no file desk
-    //             }else if(max == msgs[1].controle.sequencia){
-    //                 printf("Dado adicionado no 3°: %s\n",(char *) msgs[1].dados);
-    //                 // adiciona (char *) msg1.dados de tamanho msg1.controle.tamanho no file desk
-    //             }else{
-    //                 printf("Dado adicionado no 3° : %s\n",(char *) msgs[2].dados);
-    //                 // adiciona (char *) msg2.dados de tamanho msg2.controle.tamanho no file desk
-    //             }
-    //             try_send_ack = 1;
-    //             while(try_send_ack){
-    //             printf("tenta enviar ack\n");
-    //                 msg.controle.tipo = ACK;
-    //                 defineBuffer(&msg, buffer);
-    //                 printf("tenta enviar ack\n");
-    //                 envio = send(filedesk, buffer,tamanhoMensagem(msg.controle.tamanho), 0);
-
-    //                 // se o ack for sucessful faça o teste abaixo , caso contrario tente enviar o ack
-    //                 // vou parar quando um dos tamanhos seja != 127
-    //                 try_send_ack = 0;
-    //             }
-    //         }
-    //     }
-    // }
-//     while(wait_for_end){
-//         msg.controle.tipo = FIM;
-//         envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-//         wait_for_end = 0;
-//     }
-//     printf("Saindo da função trata_put\n");
-
-// }
-// }
-
-
-
-
-// o problema não é eles terem saido ordenado e sim como relacionar com a mensagem em si
-// ordena as menasgens do capeta
-// fazer uma comparação entre os buffers em relação ao
-// ordenar as mensagens
-// se uma das mensagens for de tamanho diferente de 127 isso quer dizer que estou aguardando a mensagem fim e wait_for_data = 0 e send_confirmation_fd = 0
-// envia ACK E acaba com as mensagens
-
-
 
 void get(){
     // envia o nome
