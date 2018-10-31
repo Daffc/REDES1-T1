@@ -87,4 +87,8 @@
     */
     int local_cd(char * comando, char * local);
 
+    void remote_ls();
+    void remote_cd(int filedesk,char *local_remote,char *local_destino,int sequencia);
+    void trata_cd(int filedesk,Mensagem *msg,char *local);
+
 #endif

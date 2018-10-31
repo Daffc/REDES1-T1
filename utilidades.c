@@ -33,12 +33,12 @@ void removeEspacos(char * origem, char * destino){
     */
     do
     {
-        if (*origem != ' ')   
+        if (*origem != ' ')
         {
             destino[i] = *origem;
             i++;
         }
-        
+
     } while(*origem++);
     destino[i+1] = '\0';
 }
@@ -112,13 +112,13 @@ int local_cd(char * comando, char * local){
     removeEspacos(comando, semEspacos);
 
     strcpy(operador, local);
-    strcat(operador, "/");    
+    strcat(operador, "/");
     strcat(operador, &semEspacos[2]);
 
     /**
      * Verifica existencia e permissão de leitura ao caminho indicado.
     */
-    if(!access(operador, F_OK | R_OK)){        
+    if(!access(operador, F_OK | R_OK)){
         /**
          * Caso usuário deseje voltar um diretório.
         */
@@ -149,7 +149,7 @@ int local_cd(char * comando, char * local){
                     /**
                      * Caso contrário, string analizada é copiada para local.
                     */
-                    strcpy(local, operador);            
+                    strcpy(local, operador);
                 }
 
                 /**
@@ -163,11 +163,11 @@ int local_cd(char * comando, char * local){
             */
             else{
                 /**
-                 * Retorna -1, informando que operação não pode ser 
+                 * Retorna -1, informando que operação não pode ser
                  * concluida devido ao tipo não condizer com um diretório.
                 */
                 return -1;
-            }  
+            }
         }
     }
     /**
@@ -195,7 +195,7 @@ int local_ls(char * comando, char * local, char *bufferSaida){
     //Busca por parametro indicado e inicializa conexão com stream de resposta.
     if(operador[2] == '\0'){
         fpls = IniciaDescritorLs("ls", local);
-    }     
+    }
     if(strstr(operador+2, "-l")){
         fpls = IniciaDescritorLs("ls -l", local);
     }
@@ -216,10 +216,10 @@ int local_ls(char * comando, char * local, char *bufferSaida){
             i++;
         }
         bufferSaida[i] ='\0';
-        
+
         // Finaliza descritor utilizado.
         FinalizaDescritorLs(fpls);
-        return 0;  
+        return 0;
     }
 
     /**
@@ -229,10 +229,110 @@ int local_ls(char * comando, char * local, char *bufferSaida){
         return 1;
 }
 
-void remote_cd(){
+void remote_cd(int filedesk,char *local,char *comando, int sequencia){
+
+    char        operador[500], semEspacos[500];
+    struct      stat path_stat;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, semEspacos);
+
+    strcpy(operador, local);
+    strcat(operador, "/");
+    strcat(operador, &semEspacos[3]);
+    int envio,resposta,reading;
+    Mensagem    msg;
+    void *buffer;
+    buffer = malloc(TAMANHO_MAXIMO);
+    msg.dados = malloc(127);
+
+    msg.marcador_inicio = 126;
+    msg.controle.sequencia = sequencia + 1;
+    msg.controle.tamanho = 0;
+    msg.controle.tipo = CD;
+    msg.crc = 0;
+    msg.dados = 0;
+
+    defineBuffer(&msg, buffer);
+    envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+    *((unsigned char *)buffer) = 0;
+    reading = 1;
+    while(reading){
+        resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+            if(*((unsigned char *)buffer) == 126){
+            printf("ger rektsarava\n");
+            recuperaMensagem(&msg, buffer);
+
+            printf("%d\t", msg.marcador_inicio);
+            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            printf("%s\t", (char *)msg.dados); 
+            printf("%d\n", msg.crc);
+            if(msg.controle.tipo == OK){
+                reading = 0;
+                strcat(local,&semEspacos[3]);
+                return;
+            }else if(msg.controle.tipo == ERRO){
+                    printf("ger rekt no err\n");
+                // int erro = *((char *) msg.dados);
+                // if(erro){
+                // // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
+                //     if(erro < 0){
+                //         printf("O caminho indicado não aponta para um diretório.\n");
+                //     }
+                //     // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
+                //     else{
+                //         printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
+                //     }
+                // }
+                return;
+            }else{
+                // calcula novo tempo para enviar o dado
+                // reading = 0;
+                // return;
+            }
+        }
+        *((unsigned char *)buffer) = 0;
+    }
     // Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
     // servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
     // Recebe resposta e retorna '0' caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+}
+
+void trata_cd(int filedesk,Mensagem *first_mensagem,char *local){
+
+    Mensagem    msg;
+    void *buffer;
+    buffer = malloc(TAMANHO_MAXIMO);
+    msg.dados = malloc(127);
+
+    msg.marcador_inicio = 126;
+    msg.controle.sequencia = first_mensagem->controle.sequencia + 1;
+    msg.crc = 0;
+
+
+    char endereco[500];
+    strcat(endereco,"cd ");
+    strcat(endereco,local);
+    strcat(endereco,(char *) first_mensagem->dados);
+
+    int try = local_cd(endereco, local);
+
+    if(try){
+        msg.controle.tipo = ERRO;
+        msg.controle.tamanho = sizeof(char);
+        *((char *)msg.dados) = try;
+    }else{
+        msg.controle.tipo = OK;
+        msg.controle.tamanho = 0;
+        msg.dados = 0;
+    }
+    defineBuffer(&msg, buffer);
+    int envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+
+    printf("envio\n");
+
 }
 
 void remote_ls(){
@@ -257,7 +357,7 @@ void put(int filedesk, char *name){
     if(!S_ISREG(path_stat.st_mode)){
             printf("Erro arquivo invalido : TIPO\n");
         return;
-    }  
+    }
 
     int try_send_name = 1;
     int try_send_fd = 1;
@@ -394,7 +494,7 @@ void put(int filedesk, char *name){
 
         while(has_data_to_sent){
 
-            
+
 
             sequencia0 = msg.controle.sequencia;
             indice = 0;
@@ -589,7 +689,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     }
 
     check_error = access(name, W_OK);
-    
+
     if(check_error){
         msg.controle.tipo = ERRO;
         strcpy(msg.dados,"PERMICAO");

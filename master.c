@@ -19,9 +19,9 @@ int main(){
     conexao = ConexaoRawSocket("eno1");
 
     buffer = malloc(TAMANHO_MAXIMO);
-    
+
     msg.dados = malloc(127);
-        
+
 
     // Definindo mensagem inicial.
     msg.marcador_inicio = 126;
@@ -29,40 +29,37 @@ int main(){
     msg.controle.sequencia = 0;
     msg.controle.tipo = HANDSHAKE;
     msg.crc = 81;
+
+    defineBuffer(&msg, buffer);   
     
-    defineBuffer(&msg, buffer);
     int resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
 
     if(resp < 0){
         printf("Erro ao enviar Mensagem: HANDSHAKE\n");
         exit(-1);
     }
-    
-    memset(buffer, 0, TAMANHO_MAXIMO);  
-    // while(!msg.controle.sequencia){
 
-    //     resp = read(conexao, buffer, 4 + TAMANHO_MAXIMO);
+    memset(buffer, 0, TAMANHO_MAXIMO);
+    while(!msg.controle.sequencia){
+        printf("rip\n");
+        resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
-    //     //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-    //     if(*((unsigned char *)buffer) == 126){
-            
-    //         recuperaMensagem(&msg, buffer);
+        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+        if(*((unsigned char *)buffer) == 126){
 
-    //         printf("%d\t", msg.marcador_inicio);
-    //         printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-    //         printf("%s\t", (char *)msg.dados); 
-    //         printf("%d\n", msg.crc);
+            recuperaMensagem(&msg, buffer);
 
-    //         uName = getpwuid(geteuid ())->pw_dir; 
+            printf("%d\t", msg.marcador_inicio);
+            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            printf("%s\t", (char *)msg.dados);
+            printf("%d\n", msg.crc);
 
-    //         strcpy(remoto, msg.dados);      
-    //     }       
-    // }          
+            uName = getpwuid(geteuid ())->pw_dir;
             getcwd(local, 500);
-
-
-    
-
+            strcpy(remoto, msg.dados);
+        }
+        
+    }
     
     // // NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
 
@@ -87,7 +84,7 @@ int main(){
                 // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
                 printf("%s", bufferLS);
             }
-        } 
+        }
 
         /**
          * Caso comando inicie com a String "cd".
@@ -106,46 +103,47 @@ int main(){
                     printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(retorno));
                 }
             }
-        } 
+        }
 
         /**
          * Caso comando inicie com a String "rls".
         */
         else if(strstr(comando, "rls") ==  comando){
             printf("COMANDO RLS\n");
-        } 
+        }
 
         /**
          * Caso comando inicie com a String "rcd".
         */
         else if(strstr(comando, "rcd") ==  comando){
             printf("COMANDO RCD\n");
-        } 
+            remote_cd(conexao,remoto,comando,msg.controle.sequencia);
+        }
 
         /**
          * Caso comando inicie com a String "get".
         */
         else if(strstr(comando, "get") ==  comando){
             printf("COMANDO GET\n");
-        } 
+        }
 
         /**
          * Caso comando inicie com a String "put".
         */
         else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
-            put(conexao,"dados");
-        } 
-        
+            put(conexao,comando);
+        }
+
         /**
          * Caso comando informado não condiza com nenhum dos listados acima (cd, ls e suas variações).
         */
         else{
             printf("Comando '%s' inválido\n", comando);
         }
-    }    
-    
-    
+    }
+
+
     return 0;
 }
 

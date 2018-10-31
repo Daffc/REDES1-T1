@@ -37,13 +37,13 @@ void handshakeMsg(Mensagem * msg){
 int main(int argc, char *argv[]){
 
 
-    int fileslave;
+    int conexao;
     int saidaread;
     int estado, estado2;
     void *buffer;
     char local[500];
 
-    fileslave = ConexaoRawSocket("eno1");
+    conexao = ConexaoRawSocket("eno1");
 
     Mensagem    msg;
     msg.dados = malloc(127);
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]){
 
     while(1){
         
-        estado = read(fileslave, buffer, TAMANHO_MAXIMO);
+        estado = read(conexao, buffer, TAMANHO_MAXIMO);
 
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if(*((unsigned char *)buffer) == 126){
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
 
             if(msg.controle.tipo == PUT){
                 printf("Iniciando tratamento do put\n");
-                trata_put(fileslave,&msg);
+                trata_put(conexao,&msg);
             }
             
             printf("%d\t", msg.marcador_inicio);
@@ -82,17 +82,18 @@ int main(int argc, char *argv[]){
                     msg.crc = 81;
 
                     defineBuffer(&msg, buffer);
-                    write(fileslave, buffer, tamanhoMensagem(msg.controle.tamanho));
+                    write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
                     memset(buffer, 0, TAMANHO_MAXIMO);
                     break;
                 case CD:
+                    trata_cd(conexao,&msg,local);
                     break;
                 case LS:
                     break;
                 case GET:
                     break;
                 case PUT:
-                    trata_put(fileslave,&msg);
+                    trata_put(conexao,&msg);
                     break;
             }            
         }       
