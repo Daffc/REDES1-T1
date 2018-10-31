@@ -1,14 +1,15 @@
 #include "utilidades.h"
+#include "comandos.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include <sys/stat.h>
-// #include <sys/stat.h>
+
 
 int tamanhoMensagem(int i){
 
@@ -19,6 +20,47 @@ int tamanhoMensagem(int i){
 }
 
 
+
+/**
+ * --------------------------------
+ * ----- FUNÇÕES INTERNAS. --------
+ * --------------------------------
+*/
+void removeEspacos(char * origem, char * destino){
+    int i = 0;
+    /**
+    * Removendo espaços da string de origem e salva resutado em destino.
+    */
+    do
+    {
+        if (*origem != ' ')   
+        {
+            destino[i] = *origem;
+            i++;
+        }
+        
+    } while(*origem++);
+    destino[i+1] = '\0';
+}
+
+
+
+/**
+ * --------------------------------
+ * ----- FUNÇÕES EXTERNAS. --------
+ * --------------------------------
+*/
+
+/**
+ * Devolve o tamanho da mensaem para envio (Necessário uma vez que mensagens de tamanho menor que 14 não são enviadas)
+*/
+// int tamanhoMensagem(Mensagem *msg){
+
+//     // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
+//     if(msg->controle.tamanho  < 10)
+//         return 14;
+//     return (msg->controle.tamanho + 4);
+// }
 
 void defineBuffer(Mensagem * msg, void * buffer){
 
@@ -45,40 +87,127 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
 
 }
 
-
-
-/*
-    Inicialização:
-        - /
-        String acumula a posição atual
+/**
+ * Imprime localidades LOCAL e REMOTA.
 */
-
-/*
-    Todas devem possuir
-
-    imprimir o local atual acessado por cd/ls
-    Estados:
-        - $ local
-        - $ remoto
+void imprimeLocalizacao(char *local,char *remoto){
+    printf("\x1b[32m" "LOCAL" "\x1b[0m" ":\t");
+    printf("%s \n", local);
+    printf("\x1b[32m" "REMOTO" "\x1b[0m" ":\t");
+    printf("%s \n", remoto);
+}
 
 
-*/
-
-/*
-    Comentarios Rafael noob : olhar onde o programa esta sendo executado
-
-*/
-void local_cd(){
+void local_cd(char * comando, char * local){
     // verificar permissão/existência
     // int access(const char *, int); retorno errno
     // printar na tela o ERRO possivel
+
+    char        operador[500], semEspacos[500];
+    struct      stat path_stat;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, semEspacos);
+
+    strcpy(operador, local);
+    strcat(operador, "/");    
+    strcat(operador, &semEspacos[2]);
+
+    /**
+     * Verifica existencia e permissão de leitura ao caminho indicado.
+    */
+    if(!access(operador, F_OK | R_OK)){        
+        /**
+         * Caso usuário deseje voltar um diretório.
+        */
+        if(strstr(comando + 3, "..")){
+            /**
+             * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+            */
+            *(strrchr(local, '/')) = '\0';
+        }
+        else{
+            stat(operador, &path_stat);
+            if(S_ISDIR(path_stat.st_mode)){
+                /**
+                 * Redefine local
+                */
+                if(strstr(comando + 3, "..")){
+                    /**
+                     * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+                    */
+                    *(strrchr(local, '/')) = '\0';
+                }
+                else{
+                    /**
+                     * Caso contrário, string analizada é copiada para local.
+                    */
+                    strcpy(local, operador);            
+                }
+            }
+
+            /**
+             * Caso caminho seja válido porem não esteja relacionad a um diretório.
+            */
+            else{
+                printf("O caminho '%s' não aponta para um diretório.\n", operador);
+            }  
+        }
+    }
+    /**
+     * Caso não consiga acessar, printa para usuário erro.
+    */
+    else{
+        printf("Não foi possivel concluir operação em '%s' : %s\n", operador, strerror(errno));
+    }
 }
 
-void local_ls(){
-    // não precisa verificar autorização
-    // utilizar ls do sistema
-    // folder atual
-    // nosso pwd relativo
+void local_ls(char * comando, char * local){
+    char    retorno, operador[100];
+    int     i = 0;
+
+    FILE    *fpls = NULL;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, operador);
+
+    //Busca por parametro indicado e inicializa conexão com stream de resposta.
+    if(operador[2] == '\0'){
+        fpls = IniciaDescritorLs("ls", local);
+    }     
+    if(strstr(operador+2, "-l")){
+        fpls = IniciaDescritorLs("ls -l", local);
+    }
+    if(strstr(operador+2, "-a")){
+        fpls = IniciaDescritorLs("ls -a", local);
+    }
+    if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
+        fpls = IniciaDescritorLs("ls -la", local);
+    }
+
+    /**
+     * Caso Stream conectando a resposta seja definida, imprime resuldato.
+    */
+    if(fpls){
+        /*Le caracter por caracter do arquivo de resposta do ls aberto e gerencia tratamento*/
+        while ((retorno = getc(fpls)) != EOF) {
+            printf("%c", retorno);
+        }
+        
+        // Finaliza descritor utilizado.
+        FinalizaDescritorLs(fpls);
+        return;  
+    }
+
+    /**
+     * Caso comando seja desconhecido, informa ao usuário.
+    */
+    else
+        printf("Comando '%s' inválido\n", comando);
 }
 
 void remote_cd(){

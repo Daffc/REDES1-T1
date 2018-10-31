@@ -4,8 +4,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <pwd.h>
 
+
+void handshakeMsg(Mensagem * msg){
+
+        /**
+         * Recupera nome do usuário atual.
+        */
+        char local_dir[500];
+        
+        getcwd(local_dir, 500);
+    
+        /**
+         * Define mensagem com nome do usuario atual.
+        */
+        msg->marcador_inicio = 126;
+        msg->controle.tamanho = strlen(local_dir) + 1;
+        memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
+        msg->controle.sequencia++;
+        
+        /**
+         * Calcular CRC AQUI !!!.
+        */
+        /**/msg->crc = 81;
+        /*---------------------*/
+}
 
 
 int main(int argc, char *argv[]){
@@ -34,15 +60,22 @@ int main(int argc, char *argv[]){
                 trata_put(fileslave,&msg);
             }
             
-            // printf("%d\t", msg.marcador_inicio);
-            // printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            // printf("%s\t", (char *)msg.dados); 
-            // printf("%d\n", msg.crc);
-            printf("GAAAAAAAAAAAAAAME OOOOOOOOOOOOVER\n");
-            exit(0);
-        }   
-        // printf("**********************\n");
-    
+            printf("%d\t", msg.marcador_inicio);
+            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            printf("%s\t", (char *)msg.dados); 
+            printf("%d\n", msg.crc);
+
+            switch(msg.controle.tipo){
+                case HANDSHAKE:
+                    handshakeMsg(&msg);
+                    defineBuffer(&msg, buffer);
+                    write(fileslave, buffer, tamanhoMensagem(msg.controle.tamanho));
+                    memset(buffer, 0, TAMANHO_MAXIMO);
+                    break;
+                case PUT:
+                    trata_put(fileslave,&msg);
+            }            
+        }       
     }   
     return 0;
 }
