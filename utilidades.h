@@ -68,10 +68,10 @@
     void imprimeLocalizacao(char * local,char * remoto);
     
     /**
-     * Trata e executa ls local.
+     * Trata e executa ls local, retornando '0' no caso de sucesso e '-1' no caso de falha.
      * 'comando' está relacionado à String da operação solicitada.
      * 'local' indica posição de memória com localização atual do usuário.
-     * 'bufferSaida' armazenará resposta do ls caso operação seja concluida com sucesso.
+     * 'bufferSaida' armazenará resposta do 'ls' caso operação seja concluida com sucesso.
     */
     int local_ls(char * comando, char * local, char *bufferSaida);
 
