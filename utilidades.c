@@ -238,10 +238,15 @@ void put(int filedesk, char *name){
             }
         }
 
-        memset(buffer,0,TAMANHO_MAXIMO);
+        // memset(buffer,0,TAMANHO_MAXIMO);
 
         int i = 0;
+
+        // memset(msg.dados,0,TAMANHO_MAXIMO);
+
         while(has_data_to_sent){
+
+            
 
             sequencia0 = msg.controle.sequencia;
             indice = 0;
