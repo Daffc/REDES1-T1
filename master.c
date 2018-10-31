@@ -11,8 +11,8 @@
 
 int main(){
 
-    int         conexao;
-    char        retorno, comando[100], local[500], remoto[500], *uName;
+    int         conexao, retorno;
+    char        comando[100], local[500], remoto[500], *uName, bufferLS[10000];
     void        *buffer;
     Mensagem    msg;
 
@@ -39,29 +39,26 @@ int main(){
     }
     
     memset(buffer, 0, TAMANHO_MAXIMO);  
-    while(!msg.controle.sequencia){
+    // while(!msg.controle.sequencia){
 
-        resp = read(conexao, buffer, 4 + TAMANHO_MAXIMO);
+    //     resp = read(conexao, buffer, 4 + TAMANHO_MAXIMO);
 
-        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if(*((unsigned char *)buffer) == 126){
+    //     //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+    //     if(*((unsigned char *)buffer) == 126){
             
-            recuperaMensagem(&msg, buffer);
+    //         recuperaMensagem(&msg, buffer);
 
-            printf("%d\t", msg.marcador_inicio);
-            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            printf("%s\t", (char *)msg.dados); 
-            printf("%d\n", msg.crc);
+    //         printf("%d\t", msg.marcador_inicio);
+    //         printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+    //         printf("%s\t", (char *)msg.dados); 
+    //         printf("%d\n", msg.crc);
 
-            // strcpy(local, "/home/");
-            // strcpy(remoto, "/home/");
-            
-            uName = getpwuid(geteuid ())->pw_dir; 
+    //         uName = getpwuid(geteuid ())->pw_dir; 
 
+    //         strcpy(remoto, msg.dados);      
+    //     }       
+    // }          
             getcwd(local, 500);
-            strcpy(remoto, msg.dados);      
-        }       
-    }          
 
 
     
@@ -80,44 +77,72 @@ int main(){
          * Caso comando inicie com a String "ls".
         */
         if(strstr(comando, "ls") ==  comando){
-            local_ls(comando, local);
+            retorno = local_ls(comando, local, bufferLS);
+
+            // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
+            if(retorno){
+                printf("Comando '%s' inválido\n", comando);
+            }
+            else{
+                // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
+                printf("%s", bufferLS);
+            }
         } 
 
         /**
-         * Caso comando inicie com a String "ls".
+         * Caso comando inicie com a String "cd".
         */
-        if(strstr(comando, "cd") ==  comando){
-            local_cd(comando, local);
+        else if(strstr(comando, "cd") ==  comando){
+            retorno = local_cd(comando, local);
+
+            // Verifica se houve erro na operação.
+            if(retorno){
+                // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
+                if(retorno < 0){
+                    printf("O caminho indicado não aponta para um diretório.\n");
+                }
+                // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
+                else{
+                    printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(retorno));
+                }
+            }
         } 
 
         /**
-         * Caso comando inicie com a String "ls".
+         * Caso comando inicie com a String "rls".
         */
-        if(strstr(comando, "rls") ==  comando){
+        else if(strstr(comando, "rls") ==  comando){
             printf("COMANDO RLS\n");
         } 
 
         /**
-         * Caso comando inicie com a String "ls".
+         * Caso comando inicie com a String "rcd".
         */
-        if(strstr(comando, "rcd") ==  comando){
+        else if(strstr(comando, "rcd") ==  comando){
             printf("COMANDO RCD\n");
         } 
 
         /**
-         * Caso comando inicie com a String "ls".
+         * Caso comando inicie com a String "get".
         */
-        if(strstr(comando, "get") ==  comando){
+        else if(strstr(comando, "get") ==  comando){
             printf("COMANDO GET\n");
         } 
 
         /**
-         * Caso comando inicie com a String "ls".
+         * Caso comando inicie com a String "put".
         */
-        if(strstr(comando, "put") ==  comando){
+        else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
             put(conexao,"dados");
         } 
+        
+        /**
+         * Caso comando informado não condiza com nenhum dos listados acima (cd, ls e suas variações).
+        */
+        else{
+            printf("Comando '%s' inválido\n", comando);
+        }
     }    
     
     

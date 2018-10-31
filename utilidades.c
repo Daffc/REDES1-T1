@@ -98,7 +98,7 @@ void imprimeLocalizacao(char *local,char *remoto){
 }
 
 
-void local_cd(char * comando, char * local){
+int local_cd(char * comando, char * local){
     // verificar permissão/existência
     // int access(const char *, int); retorno errno
     // printar na tela o ERRO possivel
@@ -127,6 +127,11 @@ void local_cd(char * comando, char * local){
              * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
             */
             *(strrchr(local, '/')) = '\0';
+
+            /**
+             * Retorna 0, informando que operação foi concluida com sucesso
+            */
+            return 0;
         }
         else{
             stat(operador, &path_stat);
@@ -146,13 +151,22 @@ void local_cd(char * comando, char * local){
                     */
                     strcpy(local, operador);            
                 }
+
+                /**
+                 * Retorna 0, informando que operação foi concluida com sucesso
+                */
+                return 0;
             }
 
             /**
              * Caso caminho seja válido porem não esteja relacionad a um diretório.
             */
             else{
-                printf("O caminho '%s' não aponta para um diretório.\n", operador);
+                /**
+                 * Retorna -1, informando que operação não pode ser 
+                 * concluida devido ao tipo não condizer com um diretório.
+                */
+                return -1;
             }  
         }
     }
@@ -160,11 +174,14 @@ void local_cd(char * comando, char * local){
      * Caso não consiga acessar, printa para usuário erro.
     */
     else{
-        printf("Não foi possivel concluir operação em '%s' : %s\n", operador, strerror(errno));
+        /**
+         * Retorna erro gerado pelo acesso indevido (Inexistência / Sem permissão de leitura)
+        */
+        return errno;
     }
 }
 
-void local_ls(char * comando, char * local){
+int local_ls(char * comando, char * local, char *bufferSaida){
     char    retorno, operador[100];
     int     i = 0;
 
@@ -193,33 +210,35 @@ void local_ls(char * comando, char * local){
      * Caso Stream conectando a resposta seja definida, imprime resuldato.
     */
     if(fpls){
-        /*Le caracter por caracter do arquivo de resposta do ls aberto e gerencia tratamento*/
+        /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
         while ((retorno = getc(fpls)) != EOF) {
-            printf("%c", retorno);
+            bufferSaida[i] = retorno ;
+            i++;
         }
+        bufferSaida[i] ='\0';
         
         // Finaliza descritor utilizado.
         FinalizaDescritorLs(fpls);
-        return;  
+        return 0;  
     }
 
     /**
      * Caso comando seja desconhecido, informa ao usuário.
     */
     else
-        printf("Comando '%s' inválido\n", comando);
+        return 1;
 }
 
 void remote_cd(){
-    // verificar permissão/existência
-    // int access(const char *, int); retorno errno
-    // devolver como mensagem slave > master
+    // Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
+    // servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
+    // Recebe resposta e retorna '0' caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
 void remote_ls(){
-    // não precisa verificar autorização
-    // devolver como mensagem slave > master
-
+    // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
+    // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
+    // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
 void put(int filedesk, char *name){
