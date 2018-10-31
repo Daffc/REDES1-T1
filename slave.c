@@ -9,37 +9,14 @@
 #include <pwd.h>
 
 
-void handshakeMsg(Mensagem * msg){
-
-        /**
-         * Recupera nome do usuário atual.
-        */
-        char local_dir[500];
-        
-        getcwd(local_dir, 500);
-    
-        /**
-         * Define mensagem com nome do usuario atual.
-        */
-        msg->marcador_inicio = 126;
-        msg->controle.tamanho = strlen(local_dir) + 1;
-        memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
-        msg->controle.sequencia++;
-        
-        /**
-         * Calcular CRC AQUI !!!.
-        */
-        /**/msg->crc = 81;
-        /*---------------------*/
-}
-
-
 int main(){
 
     int fileslave;
     int saidaread;
     int estado, estado2;
     void *buffer;
+    char local[500];
+
     fileslave = ConexaoRawSocket("lo");
 
     Mensagem    msg;
@@ -62,10 +39,28 @@ int main(){
 
             switch(msg.controle.tipo){
                 case HANDSHAKE:
-                    handshakeMsg(&msg);
+                    getcwd(local, 500);
+
+                    /**
+                     * Define mensagem com nome do usuario atual.
+                    */
+                    msg.marcador_inicio = 126;
+                    msg.controle.tamanho = strlen(local) + 1;
+                    memcpy(msg.dados, local, strlen(local) + 1);
+                    msg.controle.sequencia++;
+                    msg.crc = 81;
+
                     defineBuffer(&msg, buffer);
                     write(fileslave, buffer, tamanhoMensagem(&msg));
                     memset(buffer, 0, TAMANHO_MAXIMO);
+                    break;
+                case CD:
+                    break;
+                case LS:
+                    break;
+                case GET:
+                    break;
+                case PUT:
                     break;
             }            
         }       
