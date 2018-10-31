@@ -218,15 +218,15 @@ int local_ls(char * comando, char * local, char *bufferSaida){
 }
 
 void remote_cd(){
-    // verificar permissão/existência
-    // int access(const char *, int); retorno errno
-    // devolver como mensagem slave > master
+    // Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
+    // servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
+    // Recebe resposta e retorna '0' caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
 void remote_ls(){
-    // não precisa verificar autorização
-    // devolver como mensagem slave > master
-
+    // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
+    // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
+    // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
 void put(){
