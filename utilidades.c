@@ -75,9 +75,11 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
 
     // Guarda Marcador de início;
     memcpy(&(msg->marcador_inicio), buffer, 1);
-
+    
     // Guarda informações de controle (tamanho, sequencia, tipo)
     memcpy(&(msg->controle), buffer + 1, 2);
+
+    printf("%d\n", *((char *)buffer + 3));
 
     //Guarda dados de acordo com o informado em controle.tamanho
     memcpy(msg->dados, buffer + 3, msg->controle.tamanho);
@@ -229,68 +231,92 @@ int local_ls(char * comando, char * local, char *bufferSaida){
         return 1;
 }
 
-void remote_cd(int filedesk,char *local,char *comando, int sequencia){
+void remote_cd(int filedesk, char *local,char *comando, int sequencia){
 
     char        operador[500], semEspacos[500];
-    struct      stat path_stat;
+    int         envio,resposta,reading;
+    Mensagem    msg;
+    void        *buffer;
+
+    msg.dados = malloc(127);    
+    buffer = malloc(TAMANHO_MAXIMO);
 
     /**
      * Remove espaços de comando e guarda resultado em operador.
     */
     removeEspacos(comando, semEspacos);
 
+    /**
+     * Concatena em operador caminho que deseja-se acessar. 
+    */
     strcpy(operador, local);
     strcat(operador, "/");
     strcat(operador, &semEspacos[3]);
-    int envio,resposta,reading;
-    Mensagem    msg;
-    void *buffer;
-    buffer = malloc(TAMANHO_MAXIMO);
-    msg.dados = malloc(127);
-
+    
+    /**
+     * Define mensagem com codigo 'CD' e com caminho desejado.
+    */
     msg.marcador_inicio = 126;
-    msg.controle.sequencia = sequencia + 1;
-    msg.controle.tamanho = 0;
     msg.controle.tipo = CD;
-    msg.crc = 0;
-    msg.dados = 0;
+    msg.controle.tamanho = strlen(operador) + 1;
+    msg.controle.sequencia = sequencia + 1;
+    strcpy(msg.dados, operador);
+    msg.crc = 81;
 
     defineBuffer(&msg, buffer);
+
     envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+
     *((unsigned char *)buffer) = 0;
+
     reading = 1;
     while(reading){
         resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
             if(*((unsigned char *)buffer) == 126){
-            printf("ger rektsarava\n");
+            
             recuperaMensagem(&msg, buffer);
 
-            printf("%d\t", msg.marcador_inicio);
-            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            printf("%s\t", (char *)msg.dados); 
-            printf("%d\n", msg.crc);
+            // Caso solicitação de 'CD' seja aceita.
             if(msg.controle.tipo == OK){
                 reading = 0;
-                strcat(local,&semEspacos[3]);
-                return;
-            }else if(msg.controle.tipo == ERRO){
-                    printf("ger rekt no err\n");
-                // int erro = *((char *) msg.dados);
-                // if(erro){
-                // // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
-                //     if(erro < 0){
-                //         printf("O caminho indicado não aponta para um diretório.\n");
-                //     }
-                //     // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
-                //     else{
-                //         printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
-                //     }
-                // }
+
+                // Caso o solicitado seja voltar um diretório.
+                if(strstr(comando + 3, "..")){
+                    /**
+                     * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+                    */
+                    *(strrchr(local, '/')) = '\0';
+                }
+                else{
+                    /**
+                     * Caso contrário, string analizada é copiada para local.
+                    */
+                    strcat(local,"/");
+                    strcat(local,&semEspacos[3]);
+                }
+                return;    
+            }
+            // Caso solicitação de 'CD' não tenha sido aceita.
+            else if(msg.controle.tipo == ERRO){
+                printf("ger rekt no err\n");
+                int erro = *((char *) msg.dados);
+                if(erro){
+                // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
+                    if(erro < 0){
+                        printf("O caminho indicado não aponta para um diretório.\n");
+                    }
+                    // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
+                    else{
+                        printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
+                    }
+                }
+                free(msg.dados);
                 return;
             }else{
                 // calcula novo tempo para enviar o dado
-                // reading = 0;
-                // return;
+                reading = 0;
+                free(msg.dados);
+                return;
             }
         }
         *((unsigned char *)buffer) = 0;
@@ -298,6 +324,7 @@ void remote_cd(int filedesk,char *local,char *comando, int sequencia){
     // Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
     // servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
     // Recebe resposta e retorna '0' caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+
 }
 
 void trata_cd(int filedesk,Mensagem *first_mensagem,char *local){
