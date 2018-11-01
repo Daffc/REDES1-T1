@@ -41,7 +41,6 @@ int main(int argc, char *argv[]){
     int saidaread;
     int estado, estado2;
     void *buffer;
-    char local[500];
 
     conexao = ConexaoRawSocket("eno1");
 
@@ -58,11 +57,6 @@ int main(int argc, char *argv[]){
         if(*((unsigned char *)buffer) == 126){
             recuperaMensagem(&msg, buffer);
 
-            if(msg.controle.tipo == PUT){
-                printf("Iniciando tratamento do put\n");
-                trata_put(conexao,&msg);
-            }
-            
             printf("%d\t", msg.marcador_inicio);
             printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
             printf("%s\t", (char *)msg.dados); 
@@ -86,7 +80,7 @@ int main(int argc, char *argv[]){
                     memset(buffer, 0, TAMANHO_MAXIMO);
                     break;
                 case CD:
-                    trata_cd(conexao,&msg,local);
+                    trata_cd(conexao,&msg);
                     break;
                 case LS:
                     break;
