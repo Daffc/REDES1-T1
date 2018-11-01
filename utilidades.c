@@ -300,7 +300,7 @@ void remote_cd(int filedesk,char *local,char *comando, int sequencia){
     // Recebe resposta e retorna '0' caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
-void trata_cd(int filedesk,Mensagem *first_mensagem,char *local){
+void trata_cd(int filedesk, Mensagem *first_mensagem){
 
     Mensagem    msg;
     void *buffer;
@@ -311,28 +311,26 @@ void trata_cd(int filedesk,Mensagem *first_mensagem,char *local){
     msg.controle.sequencia = first_mensagem->controle.sequencia + 1;
     msg.crc = 0;
 
+    printf("CAMINHO \n %s\n ",  (char *)first_mensagem->dados);
 
-    char endereco[500];
-    strcat(endereco,"cd ");
-    strcat(endereco,local);
-    strcat(endereco,(char *) first_mensagem->dados);
 
-    int try = local_cd(endereco, local);
+    int try = local_cd("", first_mensagem->dados);
 
     if(try){
         msg.controle.tipo = ERRO;
-        msg.controle.tamanho = sizeof(char);
+        msg.controle.tamanho = 1;
         *((char *)msg.dados) = try;
+        printf("ERRO %d\n", try);
     }else{
         msg.controle.tipo = OK;
         msg.controle.tamanho = 0;
         msg.dados = 0;
+        printf("OK\n");
     }
     defineBuffer(&msg, buffer);
     int envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
 
-    printf("envio\n");
-
+    free(msg.dados);
 }
 
 void remote_ls(){
