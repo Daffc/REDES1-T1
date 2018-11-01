@@ -64,14 +64,14 @@ int main(int argc, char *argv[]){
 
             switch(msg.controle.tipo){
                 case HANDSHAKE:
-                    getcwd(local, 500);
+                    getcwd((char *)msg.dados, 500);
 
                     /**
                      * Define mensagem com nome do usuario atual.
                     */
                     msg.marcador_inicio = 126;
-                    msg.controle.tamanho = strlen(local) + 1;
-                    memcpy(msg.dados, local, strlen(local) + 1);
+                    msg.controle.tamanho = strlen((char *)msg.dados) + 1;
+                    // memcpy(msg.dados, local, strlen(local) + 1);
                     msg.controle.sequencia++;
                     msg.crc = 81;
 
@@ -85,6 +85,7 @@ int main(int argc, char *argv[]){
                 case LS:
                     break;
                 case GET:
+                    trata_get(conexao,&msg);
                     break;
                 case PUT:
                     trata_put(conexao,&msg);

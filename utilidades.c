@@ -833,8 +833,8 @@ void trata_put(int filedesk, Mensagem *first_msg){
     free(buffer_send);
     free(buffer_read);
 }
-
-void get(){
+////////////////////////////////////////////////////////////////// GET REKT ////////////////////
+void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     // envia o nome
     // abre write com esse nome
     // espera pela resposta OK
@@ -844,5 +844,395 @@ void get(){
     // le 127 em 127 adiciona em uma mensagem incrementa , tam/127
     // if < 127
     // getchar ++ até construir mensagem , deu 127 faz não deu trata
+    printf("iniciando get ... \n");
+    char name[500];
+    char operador[500], semEspacos[500];
+    removeEspacos(comando, semEspacos);
+    strcpy(operador, remoto);
+    strcat(operador, "/");
+    strcat(operador, &semEspacos[3]);
+    // aqui é para aproveitar o código
+    strcpy(name,&semEspacos[3]);
+
+
+    int check_file = 0;
+    int check_error = 0;
+    int envio;
+    int resposta;
+    // esse buffer fica responsavel por enviar sempre a ultima resposta
+    void *buffer_send;
+    // esse buffer fica reponsavel por receber os dados do cliente
+    void *buffer_read;
+    // controla o loop principal
+    int main_loop = 1;
+    int last_seq;
+    int min,med,max;
+    int cont = 0;
+    int sizeofmessage;
+    
+    // lembre-se do free mate
+
+    // tenta criar um arquivo e devolve resposta de sucesso com o nome...
+    Mensagem msg,msgs[3];
+    msgs[0].dados = malloc(TAMANHO_MAXIMO);
+    msgs[1].dados = malloc(TAMANHO_MAXIMO);
+    msgs[2].dados = malloc(TAMANHO_MAXIMO);
+    msg.dados = malloc(TAMANHO_MAXIMO);
+    buffer_send = malloc(TAMANHO_MAXIMO);
+    buffer_read = malloc(TAMANHO_MAXIMO);
+
+
+    
+    last_seq = sequencia + 1;
+
+    strcpy(msg.dados,operador);
+
+    FILE *fd = NULL;
+    fd = fopen(name,"w");
+    if(fd == NULL){
+        printf("erro ao criar fd do arquivo : %s \n",name);
+        printf("mensagem de erro : %s", strerror(errno));
+        main_loop = 0;
+    }
+
+    check_error = access(name, W_OK);
+
+    if(check_error){
+        printf("Erro de access no arquivo : %s\n", strerror(errno));
+        main_loop = 0;
+    }
+
+    // if(check_error){
+    //     msg.controle.tipo = ERRO;
+    //     strcpy(msg.dados,"PERMICAO");
+    //     msg.controle.tamanho = 9;
+    //     main_loop = 0;
+    // }else{
+    //     msg.controle.tipo = OK;
+    //     msg.controle.tamanho = 1;
+    // }
+    
+    // temporizar aqui tambem
+    if(main_loop){
+
+    msg.marcador_inicio = 126;
+    msg.controle.sequencia = last_seq;
+    msg.crc = 81;
+    msg.controle.tipo = GET;
+    msg.controle.tamanho = strlen(operador) + 1;
+    defineBuffer(&msg, buffer_send);    
+        envio = send(filedesk, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+    }
+
+    while(main_loop){
+        resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+        if(*((unsigned char *)buffer_read) == 126){
+            recuperaMensagem(&msg, buffer_read);
+            switch(msg.controle.tipo){
+                case FD:
+                    // sizeofmessage = (int *) msgs[0].dados;
+                    // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
+                    sizeofmessage = *((int *) msg.dados);
+                    msg.marcador_inicio = 126;
+                    msg.controle.tamanho = 1;
+                    msg.controle.sequencia = 11;
+                    msg.controle.tipo = OK;
+                    msg.crc = 81;
+                    defineBuffer(&msg, buffer_send);
+                    // adiciona o file descriptor ...
+                    // em todo caso para teste ira enviar ok
+                break;
+                case DADOS:
+                    printf("Recebi o primeiro dado tratando\n");
+                    // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
+                    recuperaMensagem(&msgs[0], buffer_read);
+                    cont = 1;
+                        while(cont < 3){
+                            resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+                            if(*((unsigned char *)buffer_read) == 126){
+                                recuperaMensagem(&msgs[cont], buffer_read);
+                                cont++;
+                                *((unsigned char *)buffer_read) = 0;
+                            }
+                        }
+                        printf("Recebi as tres mensagens TCHAU\n");
+                        min = msgs[0].controle.sequencia;
+                        med = msgs[1].controle.sequencia;
+                        max = msgs[2].controle.sequencia;
+
+                        int try = ordena(&min,&med,&max);
+                        if(try){
+
+                            if(min == msgs[0].controle.sequencia){
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                            }else if(min == msgs[1].controle.sequencia){
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                            }else{
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                            }
+
+                            if(med == msgs[0].controle.sequencia){
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                            }else if(med == msgs[1].controle.sequencia){
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                            }else{
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                            }
+
+                            if(max == msgs[0].controle.sequencia){
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                            }else if(max == msgs[1].controle.sequencia){
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                            }else{
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                            }
+
+                            msg.marcador_inicio = 126;
+                            msg.controle.tamanho = 1;
+                            msg.controle.sequencia = last_seq + 1;
+                            msg.controle.tipo = ACK;
+                            msg.crc = 81;
+                            defineBuffer(&msg, buffer_send);
+                        }else{
+                            msg.marcador_inicio = 126;
+                            msg.controle.tamanho = 1;
+                            msg.controle.sequencia = last_seq + 1;
+                            msg.controle.tipo = NACK;
+                            msg.crc = 81;
+                            defineBuffer(&msg, buffer_send);
+                        }
+                break;
+                case FIM:
+                    printf("Recebi FIM\n");
+                    main_loop = 0;
+                break;
+            }
+            // *((unsigned char *)buffer_read) = 0;
+
+            printf("sai do case/switch\n");
+        }
+        // criar um temporizador e renviar a mensagem
+        // mensagens de confirmação sempre tem o tamanho 1
+        printf("enviando mensagem ao servidor\n");
+        envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
+    }
+    printf("saindo do get\n");
+
+    free(msgs[0].dados);
+    free(msgs[1].dados);
+    free(msgs[2].dados);
+    free(msg.dados);
+    free(buffer_send);
+    free(buffer_read);
+}
+
+
+////////////////////////////////////////////////////////////////// TRATA GET REKT ////////////////////
+void trata_get(int filedesk,Mensagem *first_mensagem){
+
+    char name[500];
+
+    // depende estou enviando o nome junto?
+    strcpy(name,(char*) first_mensagem->dados);    
+
+    int check_file;
+    check_file = access(name,F_OK);
+    if( errno == ENOENT){
+        printf("No such file or directory \n");
+        return;
+    }
+
+    struct stat path_stat;
+    stat(name, &path_stat);
+    if(!S_ISREG(path_stat.st_mode)){
+            printf("Erro arquivo invalido : TIPO\n");
+        return;
+    }
+
+    FILE *fd = NULL;
+    fd = fopen(name,"r");
+    if(fd == NULL){
+        printf("erro ao criar fd do arquivo : %s \n",name);
+        return;
+    }
+
+    int try_send_name = 1;
+    int try_send_fd = 1;
+    int try_send_data = 1;
+    int try_send_fim = 1;
+    int has_data_to_sent = 1;
+    int last_seq;
+    int envio;
+    int resposta;
+    int reading;
+    void *buffer;
+    void *buffer0;
+    void *buffer1;
+    void *buffer2;
+    int indice;
+    int sequencia0,sequencia1,sequencia2;
+    int tamanho_da_mensagem;
+    int tam0,tam1,tam2;
+
+
+    char **dados;
+
+    dados = malloc(3);
+    dados[0] = malloc(TAMANHO_MAXIMO);
+    dados[1] = malloc(TAMANHO_MAXIMO);
+    dados[2] = malloc(TAMANHO_MAXIMO);
+    buffer = malloc(TAMANHO_MAXIMO);
+    buffer0 = malloc(TAMANHO_MAXIMO);
+    buffer1 = malloc(TAMANHO_MAXIMO);
+    buffer2 = malloc(TAMANHO_MAXIMO);
+    Mensagem    msg;
+    msg.dados = malloc(127);
+
+
+    fseek(fd,0,SEEK_END);
+    tamanho_da_mensagem = ftell(fd);
+
+    printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+    // devolve o ponteiro no inicio do file descriptor
+    rewind(fd);
+
+    last_seq = msg.controle.sequencia;
+    last_seq += 1;
+
+        // apos enviar o nome tenta enviar o file descriptor
+        while(try_send_fd){
+
+            // monta mensagem para enviar file descriptor
+            msg.marcador_inicio = 126;
+            msg.controle.tamanho = sizeof(char);
+            msg.controle.sequencia = last_seq;
+            *((int *) msg.dados) = tamanho_da_mensagem;
+            msg.controle.tipo = FD;
+            msg.crc = 81;
+            defineBuffer(&msg, buffer);
+            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+
+            reading = 1;
+
+            while(reading){
+                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+                    if(*((unsigned char *)buffer) == 126){
+                    recuperaMensagem(&msg, buffer);
+                    if(msg.controle.tipo == OK){
+                        reading = 0;
+                        try_send_fd = 0;
+                    }else if(msg.controle.tipo == ERRO){
+                        printf("Ocorreu um erro : %s\n",(char *) msg.dados);
+                        goto clear_dados;
+                    }else{
+                        // calcula novo tempo para enviar o dado
+                        // reading = 0;
+                        // return;
+                    }
+                }
+                *((unsigned char *)buffer) = 0;
+            }
+        }
+
+        int i = 0;
+
+        while(has_data_to_sent){
+
+            sequencia0 = msg.controle.sequencia;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[0][indice] = getc(fd);
+                i++;
+                indice++;
+            }
+            tam0 = indice;
+            sequencia1 = sequencia0 + 1;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[1][indice] = getc(fd);
+                i++;
+                indice++;
+            }
+            tam1 = indice;
+            sequencia2 = sequencia1 + 1;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[2][indice] = getc(fd);
+                i++;
+                indice++;
+            }
+            tam2 = indice;
+
+                msg.marcador_inicio = 126;
+                msg.controle.tipo = DADOS;
+                msg.controle.sequencia = sequencia0;
+                msg.controle.tamanho = tam0;
+                strcpy(msg.dados,dados[0]);
+                defineBuffer(&msg, buffer0);
+                msg.controle.sequencia = sequencia1;
+                msg.controle.tamanho = tam1;
+                strcpy(msg.dados,dados[1]);
+                defineBuffer(&msg, buffer1);
+                msg.controle.sequencia = sequencia2;
+                msg.controle.tamanho = tam2;
+                strcpy(msg.dados,dados[2]);
+                defineBuffer(&msg, buffer2);
+
+                try_send_data = 1;
+
+                while(try_send_data){
+
+                    envio = send(filedesk, buffer0, tamanhoMensagem(tam0), 0);
+                    envio = send(filedesk, buffer1, tamanhoMensagem(tam1), 0);
+                    envio = send(filedesk, buffer2, tamanhoMensagem(tam2), 0);
+
+                    reading = 1;
+                        while(reading){
+                            resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+                            if(*((unsigned char *)buffer) == 126){
+                                recuperaMensagem(&msg, buffer);
+                            if(msg.controle.tipo == ACK){
+                                reading = 0;
+                                try_send_data = 0;
+                                // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                                msg.controle.sequencia = (msg.controle.sequencia + 3);
+                            }
+                            if(msg.controle.tipo == NACK){
+                                reading = 0;
+                            }
+                            // calcula temporização aqui tambem
+                        }
+                        *((unsigned char *)buffer) = 0;
+                }
+                if(i >= tamanho_da_mensagem){
+                    has_data_to_sent = 0;
+                }
+            }
+        }
+
+        msg.marcador_inicio = 126;
+        msg.controle.tipo = FIM;
+        defineBuffer(&msg, buffer);
+        int temp = 0;
+        // tenta enviar mensagem de fim 5 vezes
+        while(temp < 5){
+            envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
+            temp++;
+        }
+
+    clear_dados:
+
+
+    free(dados[0]);
+    free(dados[1]);
+    free(dados[2]);
+    free(dados);
+    free(buffer);
+    free(buffer0);
+    free(buffer1);
+    free(buffer2);
+    free(msg.dados);
+
+
 }
 

@@ -125,6 +125,7 @@ int main(){
         */
         else if(strstr(comando, "get") ==  comando){
             printf("COMANDO GET\n");
+            get(conexao,local,remoto,comando,msg.controle.sequencia);
         }
 
         /**

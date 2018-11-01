@@ -89,6 +89,11 @@
 
     void remote_ls();
     void remote_cd(int filedesk,char *local_remote,char *local_destino,int sequencia);
-    void trata_cd(int filedesk,Mensagem *msg,char *local);
+    void trata_cd(int filedesk,Mensagem *msg);
+
+    void get(int filedesk,char *local_remote,char *local_local,char *comando,int sequencia);
+    void trata_get(int filedesk, Mensagem *msg);
+
+    
 
 #endif
