@@ -47,6 +47,7 @@
         PERMICAO, // access(const char *pathname, R_OK || W_OK);
         QUOTA,
         TIPO,
+        FD_err,
     };
 
     /**

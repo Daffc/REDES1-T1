@@ -852,7 +852,12 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     strcat(operador, "/");
     strcat(operador, &semEspacos[3]);
     // aqui é para aproveitar o código
-    strcpy(name,&semEspacos[3]);
+
+    strcpy(name, local);
+    strcat(name,"/");
+    strcat(name,&semEspacos[3]);
+
+    //strcpy(name,&semEspacos[3]);
 
 
     int check_file = 0;
@@ -1031,31 +1036,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 void trata_get(int filedesk,Mensagem *first_mensagem){
 
     char name[500];
-
-    // depende estou enviando o nome junto?
-    strcpy(name,(char*) first_mensagem->dados);    
-
-    int check_file;
-    check_file = access(name,F_OK);
-    if( errno == ENOENT){
-        printf("No such file or directory \n");
-        return;
-    }
-
-    struct stat path_stat;
-    stat(name, &path_stat);
-    if(!S_ISREG(path_stat.st_mode)){
-            printf("Erro arquivo invalido : TIPO\n");
-        return;
-    }
-
-    FILE *fd = NULL;
-    fd = fopen(name,"r");
-    if(fd == NULL){
-        printf("erro ao criar fd do arquivo : %s \n",name);
-        return;
-    }
-
+    int sucess = 1;
     int try_send_name = 1;
     int try_send_fd = 1;
     int try_send_data = 1;
@@ -1088,6 +1069,35 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     Mensagem    msg;
     msg.dados = malloc(127);
 
+    // depende estou enviando o nome junto?
+    strcpy(name,(char*) first_mensagem->dados);    
+
+    int check_file;
+    check_file = access(name,F_OK);
+    if( errno == ENOENT){
+        printf("No such file or directory \n");
+        *((char *)buffer) = INEXISTENTE;
+        sucess = 0;
+    }
+
+    struct stat path_stat;
+    stat(name, &path_stat);
+    if(!S_ISREG(path_stat.st_mode)){
+            printf("Erro arquivo invalido : TIPO\n");
+            *((char *)buffer) = TIPO;
+        sucess = 0;
+    }
+
+    FILE *fd = NULL;
+    fd = fopen(name,"r");
+    if(fd == NULL){
+        *((char *)buffer) = FD_err;
+        printf("erro ao criar fd do arquivo : %s \n",name);
+        sucess = 0;
+    }
+
+    
+
 
     fseek(fd,0,SEEK_END);
     tamanho_da_mensagem = ftell(fd);
@@ -1099,6 +1109,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     last_seq = msg.controle.sequencia;
     last_seq += 1;
 
+    if(sucess){
         // apos enviar o nome tenta enviar o file descriptor
         while(try_send_fd){
 
@@ -1208,17 +1219,19 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
                     has_data_to_sent = 0;
                 }
             }
-        }
-
-        msg.marcador_inicio = 126;
+        }        
         msg.controle.tipo = FIM;
-        defineBuffer(&msg, buffer);
-        int temp = 0;
-        // tenta enviar mensagem de fim 5 vezes
-        while(temp < 5){
-            envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
-            temp++;
-        }
+    }else{
+        msg.controle.tipo = ERRO;
+    }
+
+    msg.marcador_inicio = 126;
+    msg.controle.tamanho = sizeof(char);
+    msg.controle.sequencia = msg.controle.sequencia + 1;
+    msg.crc = 81;
+    defineBuffer(&msg, buffer); 
+
+    envio = send(filedesk, buffer, tamanhoMensagem(sizeof(char)), 0);
 
     clear_dados:
 
