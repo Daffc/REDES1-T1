@@ -59,7 +59,7 @@
      * Transfere Mensagem para buffer que será transmitido
     */
     void defineBuffer(Mensagem *msg, void * buffer);
-    void put(int filedesk, char *comando, char * local);
+    void put(int filedesk, char *comando);
     void trata_put(int filedesk,Mensagem *first_message);
     /**
      * Recupera Mensagem de buffer recebido

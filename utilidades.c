@@ -11,14 +11,6 @@
 #include <errno.h>
 
 
-int tamanhoMensagem(int i){
-
-    // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
-    if(i  < 10)
-        return 14;
-    return (i + 4);
-}
-
 
 
 /**
@@ -42,25 +34,6 @@ void removeEspacos(char * origem, char * destino){
     } while(*origem++);
     destino[i+1] = '\0';
 }
-
-
-
-/**
- * --------------------------------
- * ----- FUNÇÕES EXTERNAS. --------
- * --------------------------------
-*/
-
-/**
- * Devolve o tamanho da mensaem para envio (Necessário uma vez que mensagens de tamanho menor que 14 não são enviadas)
-*/
-// int tamanhoMensagem(Mensagem *msg){
-
-//     // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
-//     if(msg->controle.tamanho  < 10)
-//         return 14;
-//     return (msg->controle.tamanho + 4);
-// }
 
 void defineBuffer(Mensagem * msg, void * buffer){
 
@@ -99,6 +72,490 @@ void imprimeLocalizacao(char *local,char *remoto){
     printf("%s \n", remoto);
 }
 
+int ordena(int *min,int *med, int *max){
+
+    int tmp0 = *min;
+    int tmp1 = *med;
+    int tmp2 = *max;
+
+    int medio = tmp1;
+    int maior1 = (medio + 1) % 32;
+    int maior2 = (maior1 + 1) % 32;
+    int menor1 = (medio - 1) % 32;
+    int menor2 = (menor1 - 1)  % 32;
+    // printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
+    // printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
+
+        if(tmp0 == menor1 && tmp2 == maior1){
+            *min = tmp0;
+            *med = tmp1;
+            *max = tmp2;
+            return 1;
+        }
+        if(tmp0 == maior1 && tmp2 == menor1){
+            *min = tmp2;
+            *med = tmp1;
+            *max = tmp0;
+            return 1;
+        }
+        if(tmp0 == maior1 && tmp2 == maior2){
+            *min = tmp1;
+            *med = tmp0;
+            *max = tmp2;
+            return 1;
+        }
+        if(tmp0 == maior2 && tmp2 == maior1){
+            *min = tmp1;
+            *med = tmp2;
+            *max = tmp0;
+            return 1;
+
+        }
+        if(tmp0 == menor1 && tmp2 == menor2){
+            *min = tmp2;
+            *med = tmp0;
+            *max = tmp1;
+            return 1;
+        }
+        if(tmp0 == menor2 && tmp2 == menor1){
+            *min = tmp0;
+            *med = tmp2;
+            *max = tmp1;
+            return 1;
+        }
+        printf("Script de ordernar has a breach !!!\n");
+        return 0;
+
+}
+
+/**
+ * --------------------------------
+ * ----- FUNÇÕES EXTERNAS. --------
+ * --------------------------------
+*/
+
+int tamanhoMensagem(int i){
+
+    // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
+    if(i  < 10)
+        return 14;
+    return (i + 4);
+}
+
+int local_ls(char * comando, char * local, char *bufferSaida){
+    char    retorno, operador[100];
+    int     i = 0;
+
+    FILE    *fpls = NULL;
+
+    /**
+     * Remove espaços de comando e guarda resultado em operador.
+    */
+    removeEspacos(comando, operador);
+
+    //Busca por parametro indicado e inicializa conexão com stream de resposta.
+    if(operador[2] == '\0'){
+        fpls = IniciaDescritorLs("ls", local);
+    }
+    if(strstr(operador+2, "-l")){
+        fpls = IniciaDescritorLs("ls -l", local);
+    }
+    if(strstr(operador+2, "-a")){
+        fpls = IniciaDescritorLs("ls -a", local);
+    }
+    if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
+        fpls = IniciaDescritorLs("ls -la", local);
+    }
+
+    /**
+     * Caso Stream conectando a resposta seja definida, imprime resuldato.
+    */
+    if(fpls){
+        /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
+        while ((retorno = getc(fpls)) != EOF) {
+            bufferSaida[i] = retorno ;
+            i++;
+        }
+        bufferSaida[i] ='\0';
+
+        // Finaliza descritor utilizado.
+        FinalizaDescritorLs(fpls);
+        return 0;
+    }
+
+    /**
+     * Caso comando seja desconhecido, informa ao usuário.
+    */
+    else
+        return 1;
+}
+
+int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
+    // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
+    // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
+    // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+
+    char        operador[500], semEspacos[500], bufferResposta[2000];
+    long int    ponteiroResposta = 0;
+
+    operador[0] = '\0';
+
+    /**
+     * Remove espaços de comando e guarda resultado em semEspacos.
+    */
+    removeEspacos(comando, semEspacos);
+
+
+    //Busca por parametro indicado constroi String "operador" com conteúdo da menságem a ser enviada (parâmetros + caminho).
+    if(semEspacos[3] == '\0'){
+        strcpy(operador, " ");
+        strcat(operador, remoto);
+    }
+    if(strstr(&semEspacos[3], "-l")){
+        strcpy(operador, "-l ");
+        strcat(operador, remoto);
+    }
+    if(strstr(&semEspacos[3], "-a")){
+        strcpy(operador, "-a ");
+        strcat(operador, remoto);
+    }
+    if(strstr(&semEspacos[3], "-al") || strstr(&semEspacos[3], "-la")){
+        strcpy(operador, "-la ");
+        strcat(operador, remoto);
+    }
+
+    /**
+     * Caso operador possua algum conteúdo, inicia-se a operação.
+    */
+    if(*operador != '\0'){
+
+        int check_file = 0;
+        int check_error = 0;
+        int envio;
+        int resposta;
+        // esse buffer fica responsavel por enviar sempre a ultima resposta
+        void *buffer_send;
+        // esse buffer fica reponsavel por receber os dados do cliente
+        void *buffer_read;
+        // controla o loop principal
+        int main_loop = 1;
+        int last_seq;
+        int min,med,max;
+        int cont = 0;
+        int sizeofmessage;
+
+        Mensagem msg,msgs[3];
+
+        msgs[0].dados = malloc(TAMANHO_MAXIMO);
+        msgs[1].dados = malloc(TAMANHO_MAXIMO);
+        msgs[2].dados = malloc(TAMANHO_MAXIMO);
+        msg.dados = malloc(127);
+        buffer_send = malloc(TAMANHO_MAXIMO);
+        buffer_read = malloc(TAMANHO_MAXIMO);
+
+        last_seq = sequencia + 1;
+
+        msg.marcador_inicio = 126;
+        msg.controle.sequencia = last_seq;
+        msg.crc = 81;
+        msg.controle.tipo = LS;
+        msg.controle.tamanho = strlen(operador) + 1;
+
+        defineBuffer(&msg, buffer_send);    
+        
+        envio = send(conexao, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+
+        while(main_loop){
+            resposta = read(conexao, buffer_read, TAMANHO_MAXIMO);
+            if(*((unsigned char *)buffer_read) == 126){
+                recuperaMensagem(&msg, buffer_read);
+                switch(msg.controle.tipo){
+                    case DADOS:
+                        printf("Recebi o primeiro dado tratando\n");
+                        // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
+                        recuperaMensagem(&msgs[0], buffer_read);
+                        cont = 1;
+                            while(cont < 3){
+                                resposta = read(conexao, buffer_read, TAMANHO_MAXIMO);
+                                if(*((unsigned char *)buffer_read) == 126){
+                                    recuperaMensagem(&msgs[cont], buffer_read);
+                                    cont++;
+                                    *((unsigned char *)buffer_read) = 0;
+                                }
+                            }
+                            printf("Recebi as tres mensagens TCHAU\n");
+                            min = msgs[0].controle.sequencia;
+                            med = msgs[1].controle.sequencia;
+                            max = msgs[2].controle.sequencia;
+
+                            int try = ordena(&min,&med,&max);
+                            if(try){
+
+                                if(min == msgs[0].controle.sequencia){
+
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[0].dados, msgs[0].controle.tamanho);
+                                    ponteiroResposta + msgs[0].controle.tamanho;
+
+                                }else if(min == msgs[1].controle.sequencia){
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[1].dados, msgs[1].controle.tamanho);
+                                    ponteiroResposta + msgs[1].controle.tamanho;
+                                }else{
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[2].dados, msgs[2].controle.tamanho);
+                                    ponteiroResposta + msgs[2].controle.tamanho;
+                                }
+
+                                if(med == msgs[0].controle.sequencia){
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[0].dados, msgs[0].controle.tamanho);
+                                    ponteiroResposta + msgs[0].controle.tamanho;
+                                }else if(med == msgs[1].controle.sequencia){
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[1].dados, msgs[1].controle.tamanho);
+                                    ponteiroResposta + msgs[1].controle.tamanho;
+                                }else{
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[2].dados, msgs[2].controle.tamanho);
+                                    ponteiroResposta + msgs[2].controle.tamanho;
+                                }
+
+                                if(max == msgs[0].controle.sequencia){
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[0].dados, msgs[0].controle.tamanho);
+                                    ponteiroResposta + msgs[0].controle.tamanho;
+                                }else if(max == msgs[1].controle.sequencia){
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[1].dados, msgs[1].controle.tamanho);
+                                    ponteiroResposta + msgs[1].controle.tamanho;
+                                }else{
+                                    memcpy((((char *)bufferResposta) + ponteiroResposta),msgs[2].dados, msgs[2].controle.tamanho);
+                                    ponteiroResposta + msgs[2].controle.tamanho;
+                                }
+
+                                msg.marcador_inicio = 126;
+                                msg.controle.tamanho = 1;
+                                msg.controle.sequencia = last_seq + 1;
+                                msg.controle.tipo = ACK;
+                                msg.crc = 81;
+                                defineBuffer(&msg, buffer_send);
+                            }else{
+                                msg.marcador_inicio = 126;
+                                msg.controle.tamanho = 1;
+                                msg.controle.sequencia = last_seq + 1;
+                                msg.controle.tipo = NACK;
+                                msg.crc = 81;
+                                defineBuffer(&msg, buffer_send);
+                            }
+                    break;
+                    case SHOW_SCREEN:
+                        printf("%s\n", (char *) bufferResposta);
+                        main_loop = 0;
+                    break;
+                    case FIM:
+                        printf("Recebi FIM\n");
+                        main_loop = 0;
+                    break;
+                }
+                // *((unsigned char *)buffer_read) = 0;
+
+                printf("sai do case/switch\n");
+            }
+            // criar um temporizador e renviar a mensagem
+            // mensagens de confirmação sempre tem o tamanho 1
+            printf("enviando mensagem ao servidor\n");
+            envio = send(conexao, buffer_send, tamanhoMensagem(1), 0);
+        }
+        printf("saindo do get\n");
+
+        free(msgs[0].dados);
+        free(msgs[1].dados);
+        free(msgs[2].dados);
+        free(msg.dados);
+        free(buffer_send);
+        free(buffer_read);  
+        
+        /**
+         * Informa ao programa principal que operação ocorreu com sucesso.
+        */
+        return 0;
+    }
+
+    /** 
+    * Caso comando seja desconhecido, retorna código de erro.
+    */
+    else{
+        return 1;
+    }
+}
+
+void trata_ls(int conexao, Mensagem *first_mensagem){
+
+    char comando[500], bufferResposta[2000];
+    int sucess = 1;
+    int try_send_name = 1;
+    int try_send_fd = 1;
+    int try_send_data = 1;
+    int try_send_fim = 1;
+    int has_data_to_sent = 1;
+    int last_seq;
+    int envio;
+    int resposta;
+    int reading;
+    int ponteiroResposta = 0;
+    void *buffer;
+    void *buffer0;
+    void *buffer1;
+    void *buffer2;
+    int indice;
+    int sequencia0,sequencia1,sequencia2;
+    int tamanho_da_mensagem;
+    int tam0,tam1,tam2;
+
+
+    char **dados;
+
+    dados = malloc(3);
+    dados[0] = malloc(TAMANHO_MAXIMO);
+    dados[1] = malloc(TAMANHO_MAXIMO);
+    dados[2] = malloc(TAMANHO_MAXIMO);
+
+    buffer = malloc(TAMANHO_MAXIMO);
+    buffer0 = malloc(TAMANHO_MAXIMO);
+    buffer1 = malloc(TAMANHO_MAXIMO);
+    buffer2 = malloc(TAMANHO_MAXIMO);
+
+    Mensagem    msg;
+    msg.dados = malloc(127);
+
+    strcpy(comando, "ls ");
+
+    /**
+     * Verifica e recupera parâmros caso seja requisitado pelo usuário.
+    */
+    char *parametro = strtok((char *)first_mensagem->dados, " ");
+
+    /**
+     * Caso o primeiro caracter da string parâmetro seja '-', 
+     * indicando que o que segue no conteúdo é um parâmetro de 'ls'.
+    */
+    if(parametro[0] == '-')
+        strcat(comando, parametro);
+
+
+    /**
+     * envia para ls_local: 
+     * valor de comando com comando ls e os parâmetros indicados.
+     * local onde o comado deve ser efetiado indicado pela substring de first_mensagem.dados após o espaço separador.
+     * bufferResposta que armazenará resposta de ls om seus parâmetros.
+    */
+    local_ls(comando, (strrchr((char *)first_mensagem->dados, ' ') + 1), bufferResposta);
+
+    tamanho_da_mensagem = (strlen(bufferResposta) + 1);
+
+    printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+
+    last_seq = first_mensagem->controle.sequencia;
+    last_seq += 1;
+
+    if(sucess){
+
+        int i = 0;
+        while(has_data_to_sent){
+
+            sequencia0 = msg.controle.sequencia;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[0][indice] = bufferResposta[ponteiroResposta];
+                i++;
+                indice++;
+                ponteiroResposta++;
+            }
+            tam0 = indice;
+            sequencia1 = sequencia0 + 1;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[1][indice] = bufferResposta[ponteiroResposta];
+                i++;
+                indice++;
+                ponteiroResposta++;
+            }
+            tam1 = indice;
+            sequencia2 = sequencia1 + 1;
+            indice = 0;
+            while(i < tamanho_da_mensagem && indice < 127){
+                dados[2][indice] = bufferResposta[ponteiroResposta];
+                i++;
+                indice++;
+                ponteiroResposta++;
+            }
+            tam2 = indice;
+
+                msg.marcador_inicio = 126;
+                msg.controle.tipo = DADOS;
+                msg.controle.sequencia = sequencia0;
+                msg.controle.tamanho = tam0;
+                strcpy(msg.dados,dados[0]);
+                defineBuffer(&msg, buffer0);
+                msg.controle.sequencia = sequencia1;
+                msg.controle.tamanho = tam1;
+                strcpy(msg.dados,dados[1]);
+                defineBuffer(&msg, buffer1);
+                msg.controle.sequencia = sequencia2;
+                msg.controle.tamanho = tam2;
+                strcpy(msg.dados,dados[2]);
+                defineBuffer(&msg, buffer2);
+
+                try_send_data = 1;
+
+                while(try_send_data){
+
+                    envio = send(conexao, buffer0, tamanhoMensagem(tam0), 0);
+                    envio = send(conexao, buffer1, tamanhoMensagem(tam1), 0);
+                    envio = send(conexao, buffer2, tamanhoMensagem(tam2), 0);
+
+                    reading = 1;
+                        while(reading){
+                            resposta = read(conexao, buffer, TAMANHO_MAXIMO);
+                            if(*((unsigned char *)buffer) == 126){
+                                recuperaMensagem(&msg, buffer);
+                            if(msg.controle.tipo == ACK){
+                                reading = 0;
+                                try_send_data = 0;
+                                // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                                msg.controle.sequencia = (msg.controle.sequencia + 3);
+                            }
+                            if(msg.controle.tipo == NACK){
+                                reading = 0;
+                            }
+                            // calcula temporização aqui tambem
+                        }
+                        *((unsigned char *)buffer) = 0;
+                }
+                if(i >= tamanho_da_mensagem){
+                    has_data_to_sent = 0;
+                }
+            }
+        }        
+        msg.controle.tipo = FIM;
+    }else{
+        msg.controle.tipo = ERRO;
+    }
+
+    msg.marcador_inicio = 126;
+    msg.controle.tamanho = sizeof(char);
+    msg.controle.sequencia = msg.controle.sequencia + 1;
+    msg.crc = 81;
+    defineBuffer(&msg, buffer); 
+
+    envio = send(conexao, buffer, tamanhoMensagem(sizeof(char)), 0);
+
+    clear_dados:
+
+
+    free(dados[0]);
+    free(dados[1]);
+    free(dados[2]);
+    free(dados);
+    free(buffer);
+    free(buffer0);
+    free(buffer1);
+    free(buffer2);
+    free(msg.dados);
+}
 
 int local_cd(char * comando, char * local){
     // verificar permissão/existência
@@ -181,54 +638,6 @@ int local_cd(char * comando, char * local){
         */
         return errno;
     }
-}
-
-int local_ls(char * comando, char * local, char *bufferSaida){
-    char    retorno, operador[100];
-    int     i = 0;
-
-    FILE    *fpls = NULL;
-
-    /**
-     * Remove espaços de comando e guarda resultado em operador.
-    */
-    removeEspacos(comando, operador);
-
-    //Busca por parametro indicado e inicializa conexão com stream de resposta.
-    if(operador[2] == '\0'){
-        fpls = IniciaDescritorLs("ls", local);
-    }
-    if(strstr(operador+2, "-l")){
-        fpls = IniciaDescritorLs("ls -l", local);
-    }
-    if(strstr(operador+2, "-a")){
-        fpls = IniciaDescritorLs("ls -a", local);
-    }
-    if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
-        fpls = IniciaDescritorLs("ls -la", local);
-    }
-
-    /**
-     * Caso Stream conectando a resposta seja definida, imprime resuldato.
-    */
-    if(fpls){
-        /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
-        while ((retorno = getc(fpls)) != EOF) {
-            bufferSaida[i] = retorno ;
-            i++;
-        }
-        bufferSaida[i] ='\0';
-
-        // Finaliza descritor utilizado.
-        FinalizaDescritorLs(fpls);
-        return 0;
-    }
-
-    /**
-     * Caso comando seja desconhecido, informa ao usuário.
-    */
-    else
-        return 1;
 }
 
 void remote_cd(int filedesk, char *local,char *comando, int sequencia){
@@ -359,136 +768,6 @@ void trata_cd(int filedesk, Mensagem *first_mensagem){
 
     free(msg.dados);
 }
-
-
-int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
-    // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
-    // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
-    // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
-
-    char        operador[500], semEspacos[500];
-    int         envio,resposta,reading;
-    Mensagem    msg;
-    void        *buffer;
-
-    operador[0] = '\0';
-
-    /**
-     * Remove espaços de comando e guarda resultado em semEspacos.
-    */
-    removeEspacos(comando, semEspacos);
-
-
-    //Busca por parametro indicado constroi String "operador" com conteúdo da menságem a ser enviada (parâmetros + caminho).
-    if(semEspacos[3] == '\0'){
-        strcpy(operador, " ");
-        strcat(operador, remoto);
-    }
-    if(strstr(&semEspacos[3], "-l")){
-        strcpy(operador, "-l ");
-        strcat(operador, remoto);
-    }
-    if(strstr(&semEspacos[3], "-a")){
-        strcpy(operador, "-a ");
-        strcat(operador, remoto);
-    }
-    if(strstr(&semEspacos[3], "-al") || strstr(&semEspacos[3], "-la")){
-        strcpy(operador, "-la ");
-        strcat(operador, remoto);
-    }
-
-    // printf("-- %s \n", operador);
-
-    /**
-     * Caso operador possua algum conteúdo, inicia-se a operação.
-    */
-    if(*operador != '\0'){
-            msg.dados = malloc(127);    
-            buffer = malloc(TAMANHO_MAXIMO);
-
-            /**
-             * Define mensagem com codigo 'CD' e com caminho desejado.
-            */
-            msg.marcador_inicio = 126;
-            msg.controle.tipo = CD;
-            msg.controle.tamanho = strlen(operador) + 1;
-            msg.controle.sequencia = sequencia + 1;
-            strcpy(msg.dados, operador);
-            msg.crc = 81;
-        
-    }
-
-    /** 
-    * Caso comando seja desconhecido, retorna código de erro.
-    */
-    else{
-        return 1;
-    }
-
-
-
-
-
-    // defineBuffer(&msg, buffer);
-
-    // envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-    // *((unsigned char *)buffer) = 0;
-
-    // reading = 1;
-    // while(reading){
-    //     resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-    //         if(*((unsigned char *)buffer) == 126){
-            
-    //         recuperaMensagem(&msg, buffer);
-
-    //         // Caso solicitação de 'CD' seja aceita.
-    //         if(msg.controle.tipo == OK){
-    //             reading = 0;
-
-    //             // Caso o solicitado seja voltar um diretório.
-    //             if(strstr(comando + 3, "..")){
-    //                 /**
-    //                  * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
-    //                 */
-    //                 *(strrchr(local, '/')) = '\0';
-    //             }
-    //             else{
-    //                 /**
-    //                  * Caso contrário, string analizada é copiada para local.
-    //                 */
-    //                 strcat(local,"/");
-    //                 strcat(local,&semEspacos[3]);
-    //             }
-    //             return;    
-    //         }
-    //         // Caso solicitação de 'CD' não tenha sido aceita.
-    //         else if(msg.controle.tipo == ERRO){
-    //             printf("ger rekt no err\n");
-    //             int erro = *((char *) msg.dados);
-    //             if(erro){
-    //             // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
-    //                 if(erro < 0){
-    //                     printf("O caminho indicado não aponta para um diretório.\n");
-    //                 }
-    //                 // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
-    //                 else{
-    //                     printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
-    //                 }
-    //             }
-    //             free(msg.dados);
-    //             return;
-    //         }else{
-    //             // calcula novo tempo para enviar o dado
-    //             reading = 0;
-    //             free(msg.dados);
-    //             return;
-    //         }
-    //     }
-    //     *((unsigned char *)buffer) = 0;
-    // }
-}
-
 
 void put(int filedesk, char *name){
 
@@ -738,62 +1017,6 @@ void put(int filedesk, char *name){
 
 }
 
-int ordena(int *min,int *med, int *max){
-
-    int tmp0 = *min;
-    int tmp1 = *med;
-    int tmp2 = *max;
-
-    int medio = tmp1;
-    int maior1 = (medio + 1) % 32;
-    int maior2 = (maior1 + 1) % 32;
-    int menor1 = (medio - 1) % 32;
-    int menor2 = (menor1 - 1)  % 32;
-    // printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
-    // printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
-
-        if(tmp0 == menor1 && tmp2 == maior1){
-            *min = tmp0;
-            *med = tmp1;
-            *max = tmp2;
-            return 1;
-        }
-        if(tmp0 == maior1 && tmp2 == menor1){
-            *min = tmp2;
-            *med = tmp1;
-            *max = tmp0;
-            return 1;
-        }
-        if(tmp0 == maior1 && tmp2 == maior2){
-            *min = tmp1;
-            *med = tmp0;
-            *max = tmp2;
-            return 1;
-        }
-        if(tmp0 == maior2 && tmp2 == maior1){
-            *min = tmp1;
-            *med = tmp2;
-            *max = tmp0;
-            return 1;
-
-        }
-        if(tmp0 == menor1 && tmp2 == menor2){
-            *min = tmp2;
-            *med = tmp0;
-            *max = tmp1;
-            return 1;
-        }
-        if(tmp0 == menor2 && tmp2 == menor1){
-            *min = tmp0;
-            *med = tmp2;
-            *max = tmp1;
-            return 1;
-        }
-        printf("Script de ordernar has a breach !!!\n");
-        return 0;
-
-}
-
 void trata_put(int filedesk, Mensagem *first_msg){
 
     printf("iniciando put ... \n");
@@ -973,7 +1196,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     strcpy(operador, remoto);
     strcat(operador, "/");
     strcat(operador, &semEspacos[3]);
-    // aqui é para aproveitar o código
+    // aqui é para aproveitar o códigolast_seq = sequencia + 1;
 
     strcpy(name, local);
     strcat(name,"/");
@@ -1152,7 +1375,6 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     free(buffer_send);
     free(buffer_read);
 }
-
 
 ////////////////////////////////////////////////////////////////// TRATA GET REKT ////////////////////
 void trata_get(int filedesk,Mensagem *first_mensagem){
@@ -1367,7 +1589,5 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     free(buffer1);
     free(buffer2);
     free(msg.dados);
-
-
 }
 

@@ -16,7 +16,7 @@ int main(){
     void        *buffer;
     Mensagem    msg;
 
-    conexao = ConexaoRawSocket("eno1");
+    conexao = ConexaoRawSocket("enp5s0");
 
     buffer = malloc(TAMANHO_MAXIMO);
 
@@ -39,27 +39,27 @@ int main(){
         exit(-1);
     }
 
-    memset(buffer, 0, TAMANHO_MAXIMO);
-    while(!msg.controle.sequencia){
-        printf("rip\n");
-        resp = read(conexao, buffer, TAMANHO_MAXIMO);
+    // memset(buffer, 0, TAMANHO_MAXIMO);
+    // while(!msg.controle.sequencia){
+    //     printf("rip\n");
+    //     resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
-        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if(*((unsigned char *)buffer) == 126){
+    //     //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+    //     if(*((unsigned char *)buffer) == 126){
 
-            recuperaMensagem(&msg, buffer);
+    //         recuperaMensagem(&msg, buffer);
 
-            printf("%d\t", msg.marcador_inicio);
-            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            printf("%s\t", (char *)msg.dados);
-            printf("%d\n", msg.crc);
+    //         printf("%d\t", msg.marcador_inicio);
+    //         printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+    //         printf("%s\t", (char *)msg.dados);
+    //         printf("%d\n", msg.crc);
 
-            uName = getpwuid(geteuid ())->pw_dir;
-            getcwd(local, 500);
-            strcpy(remoto, msg.dados);
-        }
+    //         uName = getpwuid(geteuid ())->pw_dir;
+    //         strcpy(remoto, msg.dados);
+    //     }
         
-    }
+    // }
+            getcwd(local, 500);
     
     // // NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
 
@@ -109,7 +109,16 @@ int main(){
          * Caso comando inicie com a String "rls".
         */
         else if(strstr(comando, "rls") ==  comando){
-            printf("COMANDO RLS\n");
+            retorno = remote_ls(conexao, remoto, comando, msg.controle.sequencia);
+
+            // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
+            if(retorno){
+                printf("Comando '%s' inválido\n", comando);
+            }
+            else{
+                // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
+                printf("%s", bufferLS);
+            }
         }
 
         /**
@@ -117,7 +126,7 @@ int main(){
         */
         else if(strstr(comando, "rcd") ==  comando){
             printf("COMANDO RCD\n");
-            remote_cd(conexao,remoto,comando,msg.controle.sequencia);
+            remote_cd(conexao, remoto, comando, msg.controle.sequencia);
         }
 
         /**
@@ -133,7 +142,7 @@ int main(){
         */
         else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
-            put(conexao,comando);
+            put(conexao, comando);
         }
 
         /**
