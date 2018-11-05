@@ -366,7 +366,36 @@ void remote_ls(){
     // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
 }
 
-void put(int filedesk, char *name){
+void put(int filedesk, char *local , char*remoto , char *comando){
+
+
+
+    printf("endereço relativo local %s\n",local);
+    printf("endereço relativo remoto %s\n",remoto);
+    printf("tipo do comando %s\n",comando);
+
+
+
+
+
+
+    printf("iniciando get ... \n");
+    char name[500];
+    char operador[500], semEspacos[500];
+    removeEspacos(comando, semEspacos);
+    strcpy(operador, remoto);
+    strcat(operador, "/");
+    strcat(operador, &semEspacos[3]);
+    // aqui é para aproveitar o código
+
+    strcpy(name, local);
+    strcat(name,"/");
+    strcat(name,&semEspacos[3]);
+
+    //strcpy(name,&semEspacos[3]);
+
+    printf("comando com endereço relativo remoto %s\n",operador);
+    printf("comando com endereço relativo local %s\n",name);
 
     // char semEspacos[500];
     // removeEspacos(name, semEspacos);
@@ -441,10 +470,10 @@ void put(int filedesk, char *name){
         while(try_send_name){
             // monta mensagem para enviar o nome
             msg.marcador_inicio = 126;
-            msg.controle.tamanho = strlen(name) + 1;
+            msg.controle.tamanho = strlen(operador) + 1;
             msg.controle.sequencia = last_seq;
             msg.controle.tipo = PUT;
-            strcpy(msg.dados, name);
+            strcpy(msg.dados, operador);
             msg.crc = 81;
             defineBuffer(&msg, buffer);
             // envia a mensagem

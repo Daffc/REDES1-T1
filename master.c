@@ -133,7 +133,7 @@ int main(){
         */
         else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
-            put(conexao,comando);
+            put(conexao,local,remoto,comando);
         }
 
         /**
