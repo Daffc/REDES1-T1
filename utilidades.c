@@ -79,7 +79,7 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
     // Guarda informações de controle (tamanho, sequencia, tipo)
     memcpy(&(msg->controle), buffer + 1, 2);
 
-    printf("%d\n", *((char *)buffer + 3));
+    // printf("%d\n", *((char *)buffer + 3));
 
     //Guarda dados de acordo com o informado em controle.tamanho
     memcpy(msg->dados, buffer + 3, msg->controle.tamanho);
@@ -368,11 +368,13 @@ void remote_ls(){
 
 void put(int filedesk, char *name){
 
-
-
+    // char semEspacos[500];
+    // removeEspacos(name, semEspacos);
+    printf("%s\n",name);
     int check_file;
     check_file = access(name,F_OK);
     if( errno == ENOENT){
+        printf("mensagem de erro :%s\n",strerror(errno));
         printf("No such file or directory \n");
         return;
     }
@@ -844,6 +846,16 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     // le 127 em 127 adiciona em uma mensagem incrementa , tam/127
     // if < 127
     // getchar ++ até construir mensagem , deu 127 faz não deu trata
+
+    printf("endereço relativo local %s\n",local);
+    printf("endereço relativo remoto %s\n",remoto);
+    printf("tipo do comando %s\n",comando);
+
+
+
+
+
+
     printf("iniciando get ... \n");
     char name[500];
     char operador[500], semEspacos[500];
@@ -859,7 +871,12 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 
     //strcpy(name,&semEspacos[3]);
 
+    printf("comando com endereço relativo remoto %s\n",operador);
+    printf("comando com endereço relativo local %s\n",name);
 
+
+                
+    FILE *fp = NULL;
     int check_file = 0;
     int check_error = 0;
     int envio;
@@ -921,21 +938,20 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
-                case FD:                
-                    FILE *fd = NULL;
-                    fd = fopen(name,"w");
-                    if(fd == NULL){
-                        printf("erro ao criar fd do arquivo : %s \n",name);
-                        printf("mensagem de erro : %s", strerror(errno));
-                        main_loop = 0;
-                    }
-    
-                    check_error = access(name, W_OK);
-    
-                    if(check_error){
-                        printf("Erro de access no arquivo : %s\n", strerror(errno));
-                        main_loop = 0;
-                    }
+                case FD:
+                fp = fopen(name,"w");
+                if(fp == NULL){
+                    printf("erro ao criar fd do arquivo : %s \n",name);
+                    printf("mensagem de erro : %s", strerror(errno));
+                    main_loop = 0;
+                }
+
+                check_error = access(name, W_OK);
+
+                if(check_error){
+                    printf("Erro de access no arquivo : %s\n", strerror(errno));
+                    main_loop = 0;
+                }
                     // sizeofmessage = (int *) msgs[0].dados;
                     // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
                     sizeofmessage = *((int *) msg.dados);
@@ -967,38 +983,40 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                         max = msgs[2].controle.sequencia;
 
                         int try = ordena(&min,&med,&max);
+
+                        printf("%d %d %d \n",msgs[0].controle.tamanho,msgs[1].controle.tamanho,msgs[2].controle.tamanho);
                         if(try){
 
                             if(min == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(min == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }
 
                             if(med == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(med == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }
 
                             if(max == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(max == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
                                 printf("%s\n",(char *) msgs[0].dados);
                             }
 
@@ -1081,6 +1099,11 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
     // depende estou enviando o nome junto?
     strcpy(name,(char*) first_mensagem->dados);    
+
+
+
+    printf("Nome com local relativo do arquivo que o servidor ira enviar %s\n",name);
+    
 
     int check_file;
     check_file = access(name,F_OK);
@@ -1254,4 +1277,4 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
 
 }
-
+// how to debbug
