@@ -892,20 +892,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 
     strcpy(msg.dados,operador);
 
-    FILE *fd = NULL;
-    fd = fopen(name,"w");
-    if(fd == NULL){
-        printf("erro ao criar fd do arquivo : %s \n",name);
-        printf("mensagem de erro : %s", strerror(errno));
-        main_loop = 0;
-    }
-
-    check_error = access(name, W_OK);
-
-    if(check_error){
-        printf("Erro de access no arquivo : %s\n", strerror(errno));
-        main_loop = 0;
-    }
+    
 
     // if(check_error){
     //     msg.controle.tipo = ERRO;
@@ -934,7 +921,21 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
-                case FD:
+                case FD:                
+                    FILE *fd = NULL;
+                    fd = fopen(name,"w");
+                    if(fd == NULL){
+                        printf("erro ao criar fd do arquivo : %s \n",name);
+                        printf("mensagem de erro : %s", strerror(errno));
+                        main_loop = 0;
+                    }
+    
+                    check_error = access(name, W_OK);
+    
+                    if(check_error){
+                        printf("Erro de access no arquivo : %s\n", strerror(errno));
+                        main_loop = 0;
+                    }
                     // sizeofmessage = (int *) msgs[0].dados;
                     // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
                     sizeofmessage = *((int *) msg.dados);
