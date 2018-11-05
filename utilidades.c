@@ -629,7 +629,7 @@ void put(int filedesk, char *local , char*remoto , char *comando){
             temp++;
         }
 
-
+    fclose(fd);
     free(dados[0]);
     free(dados[1]);
     free(dados[2]);
@@ -715,7 +715,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     int min,med,max;
     int cont = 0;
     int sizeofmessage;
-    char *name;
+    char name[500];
     // lembre-se do free mate
 
     // tenta criar um arquivo e devolve resposta de sucesso com o nome...
@@ -852,6 +852,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     }
     printf("saindo do put\n");
 
+    fclose(fd);
     free(msgs[0].dados);
     free(msgs[1].dados);
     free(msgs[2].dados);
@@ -915,6 +916,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
     int min,med,max;
     int cont = 0;
     int sizeofmessage;
+    int erro = 0;
     
     // lembre-se do free mate
 
@@ -962,6 +964,13 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
+                case ERRO:
+                    // int aux = 
+                    printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
+                    // printf("%d\n",*((char *) msg.dados));
+                    main_loop = 0;
+                    erro = 1;
+                break;
                 case FD:
                 fp = fopen(name,"w");
                 if(fp == NULL){
@@ -987,6 +996,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                     defineBuffer(&msg, buffer_send);
                     // adiciona o file descriptor ...
                     // em todo caso para teste ira enviar ok
+                    envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
                 break;
                 case DADOS:
                     printf("Recebi o primeiro dado tratando\n");
@@ -1013,35 +1023,35 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 
                             if(min == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                // printf("%s\n",(char *) msgs[0].dados);
                             }else if(min == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[1].dados);
+                                // printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[2].dados);
+                                // printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             if(med == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                // printf("%s\n",(char *) msgs[0].dados);
                             }else if(med == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[1].dados);
+                                // printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[2].dados);
+                                // printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             if(max == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                // printf("%s\n",(char *) msgs[0].dados);
                             }else if(max == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[1].dados);
+                                // printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[2].dados);
+                                // printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             msg.marcador_inicio = 126;
@@ -1058,6 +1068,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                             msg.crc = 81;
                             defineBuffer(&msg, buffer_send);
                         }
+                    envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
                 break;
                 case FIM:
                     printf("Recebi FIM\n");
@@ -1070,11 +1081,13 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
         }
         // criar um temporizador e renviar a mensagem
         // mensagens de confirmação sempre tem o tamanho 1
-        printf("enviando mensagem ao servidor\n");
-        envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
+        
     }
     printf("saindo do get\n");
 
+    if(!erro){
+        fclose(fp);
+    }
     free(msgs[0].dados);
     free(msgs[1].dados);
     free(msgs[2].dados);
@@ -1106,11 +1119,11 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     int sequencia0,sequencia1,sequencia2;
     int tamanho_da_mensagem;
     int tam0,tam1,tam2;
+    int erro = 0;
 
 
-    char **dados;
+    char *dados[3];
 
-    dados = malloc(3);
     dados[0] = malloc(TAMANHO_MAXIMO);
     dados[1] = malloc(TAMANHO_MAXIMO);
     dados[2] = malloc(TAMANHO_MAXIMO);
@@ -1131,18 +1144,20 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
     int check_file;
     check_file = access(name,F_OK);
-    if( errno == ENOENT){
+    if(check_file){
         printf("No such file or directory \n");
-        *((char *)buffer) = INEXISTENTE;
-        sucess = 0;
+        *((char *)msg.dados) = errno;
+        erro = 1;
+        goto label;
     }
 
     struct stat path_stat;
     stat(name, &path_stat);
     if(!S_ISREG(path_stat.st_mode)){
-            printf("Erro arquivo invalido : TIPO\n");
-            *((char *)buffer) = TIPO;
-        sucess = 0;
+        printf("Erro arquivo invalido : TIPO\n");
+        *((char *)msg.dados) = errno;
+        erro = 1;
+        goto label;
     }
 
     FILE *fd = NULL;
@@ -1150,8 +1165,10 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     if(fd == NULL){
         *((char *)buffer) = FD_err;
         printf("erro ao criar fd do arquivo : %s \n",name);
-        sucess = 0;
+        erro = 1;
+        goto label;
     }else{
+
         fseek(fd,0,SEEK_END);
         tamanho_da_mensagem = ftell(fd);    
         printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
@@ -1274,12 +1291,15 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
             }
         }        
         msg.controle.tipo = FIM;
+        msg.controle.tamanho = 0;
     }else{
+        label:
         msg.controle.tipo = ERRO;
+        msg.controle.tamanho = 1;
+
     }
 
     msg.marcador_inicio = 126;
-    msg.controle.tamanho = sizeof(char);
     msg.controle.sequencia = msg.controle.sequencia + 1;
     msg.crc = 81;
     defineBuffer(&msg, buffer); 
@@ -1288,11 +1308,12 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
     clear_dados:
 
-
+    if(!erro){
+        fclose(fd);
+    }
     free(dados[0]);
     free(dados[1]);
     free(dados[2]);
-    free(dados);
     free(buffer);
     free(buffer0);
     free(buffer1);
@@ -1302,3 +1323,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
 }
 // how to debbug
+
+// fclose is god
+
+//volta got
