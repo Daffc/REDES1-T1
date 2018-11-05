@@ -374,12 +374,6 @@ void put(int filedesk, char *local , char*remoto , char *comando){
     printf("endereço relativo remoto %s\n",remoto);
     printf("tipo do comando %s\n",comando);
 
-
-
-
-
-
-    printf("iniciando get ... \n");
     char name[500];
     char operador[500], semEspacos[500];
     removeEspacos(comando, semEspacos);
@@ -395,6 +389,7 @@ void put(int filedesk, char *local , char*remoto , char *comando){
     //strcpy(name,&semEspacos[3]);
 
     printf("comando com endereço relativo remoto %s\n",operador);
+    printf("tamanho do operador : %d",strlen(operador));
     printf("comando com endereço relativo local %s\n",name);
 
     // char semEspacos[500];
@@ -477,7 +472,7 @@ void put(int filedesk, char *local , char*remoto , char *comando){
             msg.crc = 81;
             defineBuffer(&msg, buffer);
             // envia a mensagem
-            envio = send(filedesk, buffer, 14, 0);
+            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
 
             *((unsigned char *)buffer) = 0;
 
