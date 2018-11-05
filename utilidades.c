@@ -970,26 +970,35 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 
                             if(min == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else if(min == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }
 
                             if(med == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else if(med == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }
 
                             if(max == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else if(max == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fd);
+                                printf("%s\n",(char *) msgs[0].dados);
                             }
 
                             msg.marcador_inicio = 126;
@@ -1094,17 +1103,13 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
         *((char *)buffer) = FD_err;
         printf("erro ao criar fd do arquivo : %s \n",name);
         sucess = 0;
-    }
-
-    
-
-
-    fseek(fd,0,SEEK_END);
-    tamanho_da_mensagem = ftell(fd);
-
-    printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
-    // devolve o ponteiro no inicio do file descriptor
-    rewind(fd);
+    }else{
+        fseek(fd,0,SEEK_END);
+        tamanho_da_mensagem = ftell(fd);    
+        printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+        // devolve o ponteiro no inicio do file descriptor
+        rewind(fd);
+    }  
 
     last_seq = msg.controle.sequencia;
     last_seq += 1;
@@ -1121,7 +1126,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
             msg.controle.tipo = FD;
             msg.crc = 81;
             defineBuffer(&msg, buffer);
-            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);            
 
             reading = 1;
 
