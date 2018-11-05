@@ -992,10 +992,10 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(min == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             if(med == msgs[0].controle.sequencia){
@@ -1003,10 +1003,10 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(med == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             if(max == msgs[0].controle.sequencia){
@@ -1014,10 +1014,10 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                                 printf("%s\n",(char *) msgs[0].dados);
                             }else if(max == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[1].dados);
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                printf("%s\n",(char *) msgs[0].dados);
+                                printf("%s\n",(char *) msgs[2].dados);
                             }
 
                             msg.marcador_inicio = 126;
