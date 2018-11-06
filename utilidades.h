@@ -30,7 +30,7 @@
         HANDSHAKE,
         FD,  // file descriptor
         NONE2,
-        SHOW_SCREEN,
+        MOSTRA_TELA,
         NONE3,
         NONE4,
         GET,
