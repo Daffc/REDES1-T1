@@ -3,6 +3,7 @@
 #define _Utilidades_
 
 #include <stdio.h>
+#include <poll.h>
 
     #define TAMANHO_MAXIMO 131
     #define TIMEOUT 2
@@ -66,6 +67,14 @@
      * Recupera Mensagem de buffer recebido
     */
     void recuperaMensagem(Mensagem * msg, void * buffer);
+    
+    /**
+     * Trata timeout de envio de mensagem, informada em 'buffer_send' e seu tamanho informado 
+     * em 'tamanho', caso mensagem não retorne a tempo função retornará 0, caso mensagem volte
+     * a tempo função retornará 1 e e buffer_read conterá mensagem recebida.
+    */
+    int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho);
+
 
     /**
      * imprime locais correntes do usuário (LOCAL E REMOTO)

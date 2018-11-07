@@ -12,18 +12,18 @@
 
 int main(){
 
-    int         conexao, retorno, resp;
+    int         retorno, resp;
     char        comando[100], local[500], remoto[500], *uName, *bufferLS;
-    void        *buffer;
+    void        *buffer_send, *buffer_read;
     Mensagem    msg;
 
-    // conexao = ConexaoRawSocket("eno1");
     struct pollfd fds[1];
 
     fds[0].fd = ConexaoRawSocket("eno1");
     fds[0].events = POLLIN;
 
-    buffer = malloc(TAMANHO_MAXIMO);
+    buffer_send = malloc(TAMANHO_MAXIMO);
+    buffer_read = malloc(TAMANHO_MAXIMO);
 
     msg.dados = malloc(127);
 
@@ -35,37 +35,21 @@ int main(){
     msg.controle.tipo = HANDSHAKE;
     msg.crc = 81;
 
-    defineBuffer(&msg, buffer);   
+    defineBuffer(&msg, buffer_send);   
     
-    // resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
 
-    memset(buffer, 0, TAMANHO_MAXIMO);
     while(!msg.controle.sequencia){
 
-        resp = poll(fds, 1, TIMEOUT * 1000);
+        //Envia mensagem solicitando Informações do servidor (Caminho do iretório onde servido esta sendo executado).    
+        write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
+        
 
-        if(resp == -1){
-            printf("Erro na consulta de socket!\n");
-        }
-
-        if (!resp) {
-            printf("DEMOROU DEMAIS\n");
-            // Caso timeout, reenvie a mensagem de HANDSHAKE.
-            write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
-            if(resp < 0){
-                printf("Erro ao enviar Mensagem: HANDSHAKE\n");
-                exit(-1);
-            }
-        }
-        if (fds[0].revents & POLLIN){
-            printf ("DEU BOM\n");
-            resp = read(conexao, buffer, TAMANHO_MAXIMO);
-        }
-            
+        resp = timeout(fds, buffer_read, buffer_send, msg.controle.tamanho);
+        
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if(*((unsigned char *)buffer) == 126){
+        if((*((unsigned char *)buffer_read) == 126) && resp){
 
-            recuperaMensagem(&msg, buffer);
+            recuperaMensagem(&msg, buffer_read);
 
             printf("%d\t", msg.marcador_inicio);
             printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
@@ -79,7 +63,6 @@ int main(){
         
     }
     
-    // // NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
 
     // TESTES COM COMANDOS !!!
     while(1){
@@ -128,7 +111,7 @@ int main(){
          * Caso comando inicie com a String "rls".
         */
         else if(strstr(comando, "rls") ==  comando){
-            retorno = remote_ls(conexao, remoto, comando, msg.controle.sequencia);
+            retorno = remote_ls(fds[0].fd, remoto, comando, msg.controle.sequencia);
 
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
             if(retorno){
@@ -141,7 +124,7 @@ int main(){
         */
         else if(strstr(comando, "rcd") ==  comando){
             printf("COMANDO RCD\n");
-            remote_cd(conexao, remoto, comando, msg.controle.sequencia);
+            remote_cd(fds[0].fd, remoto, comando, msg.controle.sequencia);
         }
 
         /**
@@ -149,7 +132,7 @@ int main(){
         */
         else if(strstr(comando, "get") ==  comando){
             printf("COMANDO GET\n");
-            get(conexao,local,remoto,comando,msg.controle.sequencia);
+            get(fds[0].fd,local,remoto,comando,msg.controle.sequencia);
         }
 
         /**
@@ -157,7 +140,7 @@ int main(){
         */
         else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
-            put(conexao,local,remoto,comando);
+            put(fds[0].fd,local,remoto,comando);
         }
 
         /**

@@ -72,6 +72,35 @@ void imprimeLocalizacao(char *local,char *remoto){
     printf("%s \n", remoto);
 }
 
+int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho){
+    int resp;
+    
+    // Verifica se existe mensagens a serem lidas até tempo limite
+    resp = poll(fds, 1, TIMEOUT * 1000);
+
+    // Caso ocorra algum erro na verificação de do timeout
+    if(resp == -1){
+        printf("Erro na consulta de socket!\n");
+    }
+
+    // Caso tempo de espera tenha chegado ao fim.
+    if (!resp) {
+        printf("DEMOROU DEMAIS\n");
+        // Caso timeout, reenvie a mensagem de HANDSHAKE.
+        resp = write(fds[0].fd, buffer_send, tamanhoMensagem(tamanho));
+        printf("%d\n", resp);
+        if(resp < 0){
+            printf("Erro ao enviar Mensagem: HANDSHAKE\n");
+            exit(-1);
+        }
+    }
+    // Caso tudo ocorra normalmente.
+    if (fds[0].revents & POLLIN){
+        printf ("DEU BOM\n");
+        resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
+    }
+}
+
 int ordena(int *min,int *med, int *max){
 
     int tmp0 = *min;
