@@ -233,12 +233,18 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
         strcat(operador, remoto);
     }
 
+    
     /**
      * Caso operador possua algum conteúdo, inicia-se a operação.
     */
     if(*operador != '\0'){
 
+        printf("iniciando RLS... \n");
 
+        //strcpy(name,&semEspacos[3]);
+
+        // printf("comando com endereço relativo remoto %s\n",operador);
+        // printf("comando com endereço relativo local %s\n",name);
 
         int check_error = 0;
         int envio;
@@ -296,15 +302,17 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
                         erro = 1;
                     break;
                     case MOSTRA_TELA:
-                        printf("Recebi o primeiro dado tratando\n");
+                        // printf("Recebi o primeiro dado tratando\n");
                         // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                         recuperaMensagem(&msg_resposta, buffer_read);
-                            msg_resposta.controle.sequencia;
-
+                            // printf("Recebi as tres mensagens TCHAU\n");
+                            // printf("%d %d %d \n",msg_resposta.controle.tamanho,msg_resposta.controle.tamanho,msg_resposta.controle.tamanho);
+                            
                             // Utilizar 'try' para verificar CRC.
                             int try = 1;
                             if(try){
-                                memcpy(impressor, msg_resposta.dados, 127);
+                                memcpy(impressor, msg_resposta.dados, msg_resposta.controle.tamanho);
+                                impressor[msg_resposta.controle.tamanho] = '\0';
                                 printf("%s", impressor);
 
                                 msg.marcador_inicio = 126;
@@ -324,17 +332,20 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
                         envio = send(conexao, buffer_send, tamanhoMensagem(1), 0);
                     break;
                     case FIM:
-                        printf("Recebi FIM\n");
+                        printf("\nRecebi FIM\n");
                         main_loop = 0;
                     break;
                 }
                 *((unsigned char *)buffer_read) = 0;
 
+                // printf("sai do case/switch\n");
             }
             // criar um temporizador e renviar a mensagem
             // mensagens de confirmação sempre tem o tamanho 1
             
         }
+        // printf("saindo do get\n");
+
 
         free(msg_resposta.dados);
         free(msg.dados);

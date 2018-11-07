@@ -12,11 +12,11 @@
 int main(){
 
     int         conexao, retorno;
-    char        comando[100], local[500], remoto[500], *uName, bufferLS[10000];
+    char        comando[100], local[500], remoto[500], *uName, *bufferLS;
     void        *buffer;
     Mensagem    msg;
 
-    conexao = ConexaoRawSocket("enp5s0");
+    conexao = ConexaoRawSocket("eno1");
 
     buffer = malloc(TAMANHO_MAXIMO);
 
@@ -39,27 +39,27 @@ int main(){
         exit(-1);
     }
 
-    // memset(buffer, 0, TAMANHO_MAXIMO);
-    // while(!msg.controle.sequencia){
-    //     printf("rip\n");
-    //     resp = read(conexao, buffer, TAMANHO_MAXIMO);
+    memset(buffer, 0, TAMANHO_MAXIMO);
+    while(!msg.controle.sequencia){
+        printf("rip\n");
+        resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
-    //     //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-    //     if(*((unsigned char *)buffer) == 126){
+        //Somente le mensagem caso marcador de inicio sejá '0111 1110'
+        if(*((unsigned char *)buffer) == 126){
 
-    //         recuperaMensagem(&msg, buffer);
+            recuperaMensagem(&msg, buffer);
 
-    //         printf("%d\t", msg.marcador_inicio);
-    //         printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-    //         printf("%s\t", (char *)msg.dados);
-    //         printf("%d\n", msg.crc);
+            printf("%d\t", msg.marcador_inicio);
+            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+            printf("%s\t", (char *)msg.dados);
+            printf("%d\n", msg.crc);
 
-    //         uName = getpwuid(geteuid ())->pw_dir;
-    //         strcpy(remoto, msg.dados);
-    //     }
-        
-    // }
+            uName = getpwuid(geteuid ())->pw_dir;
+            strcpy(remoto, msg.dados);
             getcwd(local, 500);
+        }
+        
+    }
     
     // // NÃO ENVIA MSG SE TAMANHO DA MENSAGEM FOR MENOR QUE 14(BYTES)
 
@@ -74,7 +74,7 @@ int main(){
          * Caso comando inicie com a String "ls".
         */
         if(strstr(comando, "ls") ==  comando){
-            retorno = local_ls(comando, local, bufferLS);
+            retorno = local_ls(comando, local, &bufferLS);
 
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
             if(retorno){
@@ -114,10 +114,6 @@ int main(){
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
             if(retorno){
                 printf("Comando '%s' inválido\n", comando);
-            }
-            else{
-                // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
-                printf("%s", bufferLS);
             }
         }
 
