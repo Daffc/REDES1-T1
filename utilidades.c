@@ -500,6 +500,7 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
     clear_dados:
 
 
+    free(bufferResposta);
     free(leitor);
     free(buffer);
     free(buffer_envio);

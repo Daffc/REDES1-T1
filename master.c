@@ -101,6 +101,7 @@ int main(){
             else{
                 // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
                 printf("%s", bufferLS);
+                free(bufferLS);
             }
         }
 
