@@ -37,30 +37,30 @@ int main(){
 
     defineBuffer(&msg, buffer);   
     
-    // int resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
-
-    // if(resp < 0){
-    //     printf("Erro ao enviar Mensagem: HANDSHAKE\n");
-    //     exit(-1);
-    // }
-
-    // resp = read(conexao, buffer, TAMANHO_MAXIMO);
+    // resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
 
     memset(buffer, 0, TAMANHO_MAXIMO);
     while(!msg.controle.sequencia){
-        // resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
-        resp = poll(fds, 1, 10 * 1000);
+        resp = poll(fds, 1, TIMEOUT * 1000);
 
         if(resp == -1){
-            printf("DEU RUIM\n");
+            printf("Erro na consulta de socket!\n");
         }
 
         if (!resp) {
             printf("DEMOROU DEMAIS\n");
+            // Caso timeout, reenvie a mensagem de HANDSHAKE.
+            write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
+            if(resp < 0){
+                printf("Erro ao enviar Mensagem: HANDSHAKE\n");
+                exit(-1);
+            }
         }
-        if (fds[0].revents & POLLIN)
+        if (fds[0].revents & POLLIN){
             printf ("DEU BOM\n");
+            resp = read(conexao, buffer, TAMANHO_MAXIMO);
+        }
             
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if(*((unsigned char *)buffer) == 126){
