@@ -77,7 +77,7 @@
      * 'local' indica posição de memória com localização atual do usuário.
      * 'bufferSaida' armazenará resposta do 'ls' caso operação seja concluida com sucesso.
     */
-    int local_ls(char * comando, char * local, char *bufferSaida);
+    int local_ls(char * comando, char * local, char **bufferSaida);
 
     /**
      * Trata e executa cd local, retornando -1 caso apontado não seja um diretório, 
@@ -87,7 +87,7 @@
      * 'local' indica posição de memória com localização atual do usuário.
     */
     int local_cd(char * comando, char * local);
-
+    void trata_ls(int conexao, Mensagem *first_mensagem);
     int remote_ls(int conexao, char *remoto, char *comando, int sequencia);
     void remote_cd(int filedesk,char *local_remote,char *local_destino,int sequencia);
     void trata_cd(int filedesk,Mensagem *msg);

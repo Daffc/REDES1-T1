@@ -83,6 +83,7 @@ int main(int argc, char *argv[]){
                     trata_cd(conexao,&msg);
                     break;
                 case LS:
+                    trata_ls(conexao,&msg);
                     break;
                 case GET:
                     trata_get(conexao,&msg);

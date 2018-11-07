@@ -142,9 +142,11 @@ int tamanhoMensagem(int i){
     return (i + 4);
 }
 
-int local_ls(char * comando, char * local, char *bufferSaida){
+int local_ls(char * comando, char * local, char **bufferSaida){
     char    retorno, operador[100];
-    int     i = 0;
+    long int     i = 0;
+    
+    *bufferSaida = malloc(1000);
 
     FILE    *fpls = NULL;
 
@@ -167,16 +169,22 @@ int local_ls(char * comando, char * local, char *bufferSaida){
         fpls = IniciaDescritorLs("ls -la", local);
     }
 
+
+
+
     /**
      * Caso Stream conectando a resposta seja definida, imprime resuldato.
     */
     if(fpls){
         /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
         while ((retorno = getc(fpls)) != EOF) {
-            bufferSaida[i] = retorno ;
+            (*bufferSaida)[i] = retorno ;
             i++;
+            // Caso buffe não seja grande o suficiente, alocar mais posições de memória.
+            if(i%1000 == 0)
+                *bufferSaida = realloc(*bufferSaida, 1000 * ((i / 1000) +1 ));
         }
-        bufferSaida[i] ='\0';
+        (*bufferSaida)[i] ='\0';
 
         // Finaliza descritor utilizado.
         FinalizaDescritorLs(fpls);
@@ -230,15 +238,7 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
     */
     if(*operador != '\0'){
 
-        printf("iniciando RLS... \n");
-        char name[500];
-        // aqui é para aproveitar o códigolast_seq = sequencia + 1;
 
-
-        //strcpy(name,&semEspacos[3]);
-
-        printf("comando com endereço relativo remoto %s\n",operador);
-        printf("comando com endereço relativo local %s\n",name);
 
         int check_error = 0;
         int envio;
@@ -299,11 +299,8 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
                         printf("Recebi o primeiro dado tratando\n");
                         // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                         recuperaMensagem(&msg_resposta, buffer_read);
-                            printf("Recebi as tres mensagens TCHAU\n");
                             msg_resposta.controle.sequencia;
 
-                            printf("%d %d %d \n",msg_resposta.controle.tamanho,msg_resposta.controle.tamanho,msg_resposta.controle.tamanho);
-                            
                             // Utilizar 'try' para verificar CRC.
                             int try = 1;
                             if(try){
@@ -331,15 +328,13 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
                         main_loop = 0;
                     break;
                 }
-                // *((unsigned char *)buffer_read) = 0;
+                *((unsigned char *)buffer_read) = 0;
 
-                printf("sai do case/switch\n");
             }
             // criar um temporizador e renviar a mensagem
             // mensagens de confirmação sempre tem o tamanho 1
             
         }
-        printf("saindo do get\n");
 
         free(msg_resposta.dados);
         free(msg.dados);
@@ -362,7 +357,7 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
 
 void trata_ls(int conexao, Mensagem *first_mensagem){
 
-    char comando[500], bufferResposta[2000];
+    char comando[500], *bufferResposta;
     int sucess = 1;
     int try_send_data = 1;
     int has_data_to_sent = 1;
@@ -392,14 +387,27 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
     /**
      * Verifica e recupera parâmetros caso seja requisitado pelo usuário.
     */
-    char *parametro = strtok((char *)first_mensagem->dados, " ");
-
+    char *parametro;
+    parametro = strtok((char *)first_mensagem->dados, " ");
+    
     /**
      * Caso o primeiro caracter da string parâmetro seja '-', 
      * indicando que o que segue no conteúdo é um parâmetro de 'ls'.
     */
-    if(parametro[0] == '-')
+    printf("**%s\n", parametro);
+    if(parametro[0] == '-'){
         strcat(comando, parametro);
+        printf("--%s\n", comando);
+
+        parametro = strtok(NULL, " ");
+
+        printf("()%s\n", parametro);
+        sucess = local_ls(comando, parametro, &bufferResposta);
+    }
+    else{
+        printf("--%s\n", comando);
+        sucess = local_ls(comando, parametro, &bufferResposta);
+    }
 
 
     /**
@@ -407,10 +415,10 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
      * valor de comando com comando ls e os parâmetros indicados.
      * local onde o comado deve ser efetiado indicado pela substring de first_mensagem.dados após o espaço separador.
      * bufferResposta que armazenará resposta de ls om seus parâmetros.
+     * 
     */
-    sucess = local_ls(comando, (strrchr((char *)first_mensagem->dados, ' ') + 1), bufferResposta);
 
-    tamanho_da_mensagem = (strlen(bufferResposta) + 1);
+    tamanho_da_mensagem = (strlen(bufferResposta));
 
     printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
 
@@ -422,12 +430,14 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
         int i = 0;
         while(has_data_to_sent){
             indice = 0;
-            ponteiroResposta += strlen(strncpy(&leitor[0], &bufferResposta[ponteiroResposta], 127));
+            ponteiroResposta += strlen(strncpy(leitor, &bufferResposta[ponteiroResposta], 127));
 
             msg.marcador_inicio = 126;
             msg.controle.tipo = MOSTRA_TELA;
             msg.controle.sequencia = msg.controle.sequencia +1;
-            msg.controle.tamanho = strlen(leitor) +1;
+            msg.controle.tamanho = strlen(leitor);
+
+
             // DEFINIR CRC.
 
             strcpy(msg.dados,leitor);
@@ -436,7 +446,7 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
             try_send_data = 1;
 
             while(try_send_data){
-
+                // printf("%s",(char*) msg.dados);
                 envio = send(conexao, buffer_envio, tamanhoMensagem(msg.controle.tamanho), 0);
 
                 reading = 1;
@@ -457,7 +467,8 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
                     }
                     *((unsigned char *)buffer) = 0;
                 }
-                if(i >= tamanho_da_mensagem){
+
+                if(ponteiroResposta >= tamanho_da_mensagem){
                     has_data_to_sent = 0;
                 }
             }
