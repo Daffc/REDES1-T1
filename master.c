@@ -8,15 +8,20 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <pwd.h>
+#include <poll.h>
 
 int main(){
 
-    int         conexao, retorno;
+    int         conexao, retorno, resp;
     char        comando[100], local[500], remoto[500], *uName, *bufferLS;
     void        *buffer;
     Mensagem    msg;
 
-    conexao = ConexaoRawSocket("eno1");
+    // conexao = ConexaoRawSocket("eno1");
+    struct pollfd fds[1];
+
+    fds[0].fd = ConexaoRawSocket("eno1");
+    fds[0].events = POLLIN;
 
     buffer = malloc(TAMANHO_MAXIMO);
 
@@ -32,18 +37,31 @@ int main(){
 
     defineBuffer(&msg, buffer);   
     
-    int resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
+    // int resp = write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
 
-    if(resp < 0){
-        printf("Erro ao enviar Mensagem: HANDSHAKE\n");
-        exit(-1);
-    }
+    // if(resp < 0){
+    //     printf("Erro ao enviar Mensagem: HANDSHAKE\n");
+    //     exit(-1);
+    // }
+
+    // resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
     memset(buffer, 0, TAMANHO_MAXIMO);
     while(!msg.controle.sequencia){
-        printf("rip\n");
-        resp = read(conexao, buffer, TAMANHO_MAXIMO);
+        // resp = read(conexao, buffer, TAMANHO_MAXIMO);
 
+        resp = poll(fds, 1, 10 * 1000);
+
+        if(resp == -1){
+            printf("DEU RUIM\n");
+        }
+
+        if (!resp) {
+            printf("DEMOROU DEMAIS\n");
+        }
+        if (fds[0].revents & POLLIN)
+            printf ("DEU BOM\n");
+            
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if(*((unsigned char *)buffer) == 126){
 
