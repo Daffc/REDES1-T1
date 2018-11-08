@@ -86,7 +86,6 @@ int timeout(struct pollfd fds[], void *buffer_read){
     // Caso tempo de espera tenha chegado ao fim.
     if (!resp) {
         printf("DEMOROU DEMAIS\n");
-        *((unsigned char *)buffer_read) = 0;
         return 0;
     }
     // Caso tudo ocorra normalmente.
@@ -875,6 +874,8 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                     // calcula novo tempo para enviar o dado
                     reading = 0;
                 }
+                // evitar loop infinito
+                *((unsigned char *)buffer) = 0;
             }
         }
     }
@@ -895,10 +896,14 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
         reading = 1;
 
+        envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
         while(reading){
-            envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
             
             resp = timeout(conexao, buffer);
+
+            if(!resp){
+                envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+            }
             
             if((*((unsigned char *)buffer) == 126 && resp)){
                 recuperaMensagem(&msg, buffer);
@@ -914,6 +919,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                     // return;
                 }
             }
+            *((unsigned char *)buffer) = 0;
         }
     }
 
@@ -952,55 +958,61 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
         }
         tam2 = indice;
 
-            msg.marcador_inicio = 126;
-            msg.controle.tipo = DADOS;
-            msg.controle.sequencia = sequencia0;
-            msg.controle.tamanho = tam0;
-            strcpy(msg.dados,dados[0]);
-            defineBuffer(&msg, buffer0);
-            msg.controle.sequencia = sequencia1;
-            msg.controle.tamanho = tam1;
-            strcpy(msg.dados,dados[1]);
-            defineBuffer(&msg, buffer1);
-            msg.controle.sequencia = sequencia2;
-            msg.controle.tamanho = tam2;
-            strcpy(msg.dados,dados[2]);
-            defineBuffer(&msg, buffer2);
+        msg.marcador_inicio = 126;
+        msg.controle.tipo = DADOS;
+        msg.controle.sequencia = sequencia0;
+        msg.controle.tamanho = tam0;
+        strcpy(msg.dados,dados[0]);
+        defineBuffer(&msg, buffer0);
+        msg.controle.sequencia = sequencia1;
+        msg.controle.tamanho = tam1;
+        strcpy(msg.dados,dados[1]);
+        defineBuffer(&msg, buffer1);
+        msg.controle.sequencia = sequencia2;
+        msg.controle.tamanho = tam2;
+        strcpy(msg.dados,dados[2]);
+        defineBuffer(&msg, buffer2);
 
-            try_send_data = 1;
+        try_send_data = 1;
 
-            while(try_send_data){
-                reading = 1;
-                
-                while(reading){
-                    envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
-                    envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
-                    envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
-                    
-                    printf("%s", &((char *) buffer0)[3]);
-                    printf("%s", &((char *) buffer1)[3]);
-                    printf("%s", &((char *) buffer2)[3]);
-                    
-                    resp = timeout(conexao, buffer);
+        
+        envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+        envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+        envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
 
-                    if((*((unsigned char *)buffer) == 126) && resp){
-                        recuperaMensagem(&msg, buffer);
-                        if(msg.controle.tipo == ACK){
-                            reading = 0;
-                            try_send_data = 0;
-                            // incrementa a sequencia em tres somente após a garantia que enviei as tres
-                            msg.controle.sequencia = (msg.controle.sequencia + 3);
-                        }
-                        if(msg.controle.tipo == NACK){
-                            reading = 0;
-                        }
-                        // calcula temporização aqui tambem'
-                    }
-                }
-            if(i >= tamanho_da_mensagem){
-                has_data_to_sent = 0;
+        reading = 1;
+        while(reading){
+        
+            
+        
+        
+            resp = timeout(conexao, buffer);
+            if(!resp){
+                printf("demorou reenviando...");
+                envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+                envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+                envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);                         
             }
+            // resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
+            if((*((unsigned char *)buffer) == 126) && resp){
+                recuperaMensagem(&msg, buffer);
+                if(msg.controle.tipo == ACK){
+                    reading = 0;
+                    try_send_data = 0;
+                    // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                    msg.controle.sequencia = (msg.controle.sequencia + 3);
+                }
+                if(msg.controle.tipo == NACK){
+                    reading = 0;
+                }
+                // calcula temporização aqui tambem'
+            }
+            *((unsigned char *)buffer) = 0;
         }
+        if(i >= tamanho_da_mensagem){
+            has_data_to_sent = 0;
+        }
+        
     }
 
     msg.marcador_inicio = 126;
