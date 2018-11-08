@@ -38,13 +38,14 @@ int main(){
     defineBuffer(&msg, buffer_send);   
     
 
-    while(!msg.controle.sequencia){
+    int received = 1;
+    while(received){
 
         //Envia mensagem solicitando Informações do servidor (Caminho do iretório onde servido esta sendo executado).    
         write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
         
 
-        resp = timeout(fds, buffer_read, buffer_send, msg.controle.tamanho);
+        resp = timeout(fds, buffer_read);
         
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if((*((unsigned char *)buffer_read) == 126) && resp){
@@ -59,6 +60,7 @@ int main(){
             uName = getpwuid(geteuid ())->pw_dir;
             strcpy(remoto, msg.dados);
             getcwd(local, 500);
+            received = 0;
         }
         
     }
@@ -140,7 +142,7 @@ int main(){
         */
         else if(strstr(comando, "put") ==  comando){
             printf("COMANDO PUT\n");
-            put(fds[0].fd,local,remoto,comando);
+            put(fds, local, remoto, comando);
         }
 
         /**
