@@ -162,35 +162,6 @@ int ordena(int *min,int *med, int *max){
  * --------------------------------
 */
 
-int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho){
-    int resp;
-    
-    // Verifica se existe mensagens a serem lidas até tempo limite
-    resp = poll(fds, 1, TIMEOUT * 1000);
-
-    // Caso ocorra algum erro na verificação de do timeout
-    if(resp == -1){
-        printf("Erro na consulta de socket!\n");
-    }
-
-    // Caso tempo de espera tenha chegado ao fim.
-    if (!resp) {
-        printf("DEMOROU DEMAIS\n");
-        // Caso timeout, reenvie a mensagem de HANDSHAKE.
-        resp = write(fds[0].fd, buffer_send, tamanhoMensagem(tamanho));
-        printf("%d\n", resp);
-        if(resp < 0){
-            printf("Erro ao enviar Mensagem: HANDSHAKE\n");
-            exit(-1);
-        }
-    }
-    // Caso tudo ocorra normalmente.
-    if (fds[0].revents & POLLIN){
-        printf ("DEU BOM\n");
-        resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
-    }
-}
-
 int tamanhoMensagem(int i){
 
     // Varidfica se mensagem não tem tamanho necessario (minimo = 14) e retorna tamanho mínimo.
@@ -889,10 +860,13 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
         reading = 1;
 
+        envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
         while(reading){
-            envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
             resp = timeout(conexao, buffer);
-
+            
+            if(!resp){
+                envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+            }
             if((*((unsigned char *)buffer) == 126) && resp){
                 recuperaMensagem(&msg, buffer);
                 // sucesso ao receber o ok do servidor
@@ -1015,10 +989,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
         reading = 1;
         while(reading){
-        
-            
-        
-        
+                
             resp = timeout(conexao, buffer);
             if(!resp){
                 printf("demorou reenviando...");
@@ -1052,11 +1023,26 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     msg.controle.tipo = FIM;
     defineBuffer(&msg, buffer);
     int temp = 0;
-    // tenta enviar mensagem de fim 5 vezes
-    while(temp < 5){
-        envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
-        temp++;
-    }
+    
+    envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
+
+    // // Espera por confirmação de recebbimendo de
+    // while(1){
+    //     resp = timeout(conexao, buffer);
+        
+    //     if(!resp){
+    //         envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
+    //     }
+
+    //     if((*((unsigned char *)buffer) == 126) && resp){
+    //         if(msg.controle.tipo == ACK){
+    //             break;
+    //         }
+    //         if(msg.controle.tipo == NACK){
+    //             envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
+    //         }
+    //     }
+    // }
 
     fclose(fd);
     free(dados[0]);
@@ -1563,11 +1549,13 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
             msg.controle.tipo = FD;
             msg.crc = 81;
             defineBuffer(&msg, buffer);
+
             envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);            
 
             reading = 1;
 
             while(reading){
+
                 resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
                     if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
