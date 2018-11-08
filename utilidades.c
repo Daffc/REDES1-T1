@@ -76,6 +76,30 @@ void imprimeLocalizacao(char *local,char *remoto){
     printf("%s \n", remoto);
 }
 
+int timeout(struct pollfd fds[], void *buffer_read){
+    int resp;
+
+    // Verifica se existe mensagens a serem lidas até tempo limite
+    resp = poll(fds, 1, TIMEOUT * 1000);
+
+    // Caso ocorra algum erro na verificação de do timeout
+    if(resp == -1){
+        printf("Erro na consulta de socket!\n");
+    }
+
+    // Caso tempo de espera tenha chegado ao fim.
+    if (!resp) {
+        printf("DEMOROU DEMAIS\n");
+        return 0;
+    }
+    // Caso tudo ocorra normalmente.
+    if (fds[0].revents & POLLIN){
+        // printf ("DEU BOM\n");
+        resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
+        return 1;
+    }
+}
+
 int ordena(int *min,int *med, int *max){
 
     int tmp0 = *min;
@@ -752,7 +776,7 @@ void trata_cd(int filedesk, Mensagem *first_mensagem){
     free(msg.dados);
 }
 
-void put(int filedesk, char *local , char*remoto , char *comando){
+void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
 
 
@@ -805,7 +829,9 @@ void put(int filedesk, char *local , char*remoto , char *comando){
     int envio;
     int resposta;
     int reading;
+    int resp;
     void *buffer;
+    void *buffer_send;
     void *buffer0;
     void *buffer1;
     void *buffer2;
@@ -822,6 +848,7 @@ void put(int filedesk, char *local , char*remoto , char *comando){
     dados[1] = malloc(TAMANHO_MAXIMO);
     dados[2] = malloc(TAMANHO_MAXIMO);
     buffer = malloc(TAMANHO_MAXIMO);
+    buffer_send = malloc(TAMANHO_MAXIMO);
     buffer0 = malloc(TAMANHO_MAXIMO);
     buffer1 = malloc(TAMANHO_MAXIMO);
     buffer2 = malloc(TAMANHO_MAXIMO);
@@ -844,176 +871,192 @@ void put(int filedesk, char *local , char*remoto , char *comando){
     // devolve o ponteiro no inicio do file descriptor
     rewind(fd);
 
-        last_seq = msg.controle.sequencia;
-        last_seq += 1;
+    last_seq = msg.controle.sequencia;
+    last_seq += 1;
 
 
-        while(try_send_name){
-            // monta mensagem para enviar o nome
-            msg.marcador_inicio = 126;
-            msg.controle.tamanho = strlen(operador) + 1;
-            msg.controle.sequencia = last_seq;
-            msg.controle.tipo = PUT;
-            strcpy(msg.dados, operador);
-            msg.crc = 81;
-            defineBuffer(&msg, buffer);
-            // envia a mensagem
-            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+    while(try_send_name){
+        // monta mensagem para enviar o nome
+        msg.marcador_inicio = 126;
+        msg.controle.tamanho = strlen(operador) + 1;
+        msg.controle.sequencia = last_seq;
+        msg.controle.tipo = PUT;
+        strcpy(msg.dados, operador);
+        msg.crc = 81;
+        defineBuffer(&msg, buffer_send);
 
-            *((unsigned char *)buffer) = 0;
+        *((unsigned char *)buffer) = 0;
 
-            reading = 1;
+        reading = 1;
 
-            while(reading){
-                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-                if(*((unsigned char *)buffer) == 126){
-                    recuperaMensagem(&msg, buffer);
-                    // sucesso ao receber o ok do servidor
-                    if(msg.controle.tipo == OK){
-                        try_send_name = 0;
-                        reading = 0;
-                    }else if(msg.controle.tipo == ERRO){
-                        // Arrumar uma maneira de arrumar isso
-                        printf("Ocorreu um erro : %s\n",(char *) msg.dados);
-                        return;
-                    }else{
-                        // calcula novo tempo para enviar o dado
-                        reading = 0;
-                    }
-                    // evitar loop infinito
-                    *((unsigned char *)buffer) = 0;
+        while(reading){
+            envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+            resp = timeout(conexao, buffer);
+
+            if((*((unsigned char *)buffer) == 126) && resp){
+                recuperaMensagem(&msg, buffer);
+                // sucesso ao receber o ok do servidor
+                if(msg.controle.tipo == OK){
+                    try_send_name = 0;
+                    reading = 0;
+                }else if(msg.controle.tipo == ERRO){
+                    // Arrumar uma maneira de arrumar isso
+                    printf("Ocorreu um erro : %s\n",(char *) msg.dados);
+                    return;
+                }else{
+                    // calcula novo tempo para enviar o dado
+                    reading = 0;
                 }
-            }
-        }
-
-        last_seq++;
-
-        // apos enviar o nome tenta enviar o file descriptor
-        while(try_send_fd){
-
-            // monta mensagem para enviar file descriptor
-            msg.marcador_inicio = 126;
-            msg.controle.tamanho = 19;
-            msg.controle.sequencia = last_seq;
-            *((int *) msg.dados) = tamanho_da_mensagem;
-            msg.controle.tipo = FD;
-            msg.crc = 81;
-            defineBuffer(&msg, buffer);
-            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
-
-            reading = 1;
-
-            while(reading){
-                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-                    if(*((unsigned char *)buffer) == 126){
-                    recuperaMensagem(&msg, buffer);
-                    if(msg.controle.tipo == OK){
-                        reading = 0;
-                        try_send_fd = 0;
-                    }else if(msg.controle.tipo == ERRO){
-                        printf("Ocorreu um erro : %s\n",(char *) msg.dados);
-                        return;
-                    }else{
-                        // calcula novo tempo para enviar o dado
-                        // reading = 0;
-                        // return;
-                    }
-                }
+                // evitar loop infinito
                 *((unsigned char *)buffer) = 0;
             }
         }
+    }
 
-        // memset(buffer,0,TAMANHO_MAXIMO);
+    last_seq++;
 
-        int i = 0;
+    // apos enviar o nome tenta enviar o file descriptor
+    while(try_send_fd){
 
-        // memset(msg.dados,0,TAMANHO_MAXIMO);
+        // monta mensagem para enviar file descriptor
+        msg.marcador_inicio = 126;
+        msg.controle.tamanho = 19;
+        msg.controle.sequencia = last_seq;
+        *((int *) msg.dados) = tamanho_da_mensagem;
+        msg.controle.tipo = FD;
+        msg.crc = 81;
+        defineBuffer(&msg, buffer);
 
-        while(has_data_to_sent){
+        reading = 1;
 
+        envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+        while(reading){
+            
+            resp = timeout(conexao, buffer);
 
-
-            sequencia0 = msg.controle.sequencia;
-            indice = 0;
-            while(i < tamanho_da_mensagem && indice < 127){
-                dados[0][indice] = getc(fd);
-                i++;
-                indice++;
+            if(!resp){
+                envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
             }
-            tam0 = indice;
-            sequencia1 = sequencia0 + 1;
-            indice = 0;
-            while(i < tamanho_da_mensagem && indice < 127){
-                dados[1][indice] = getc(fd);
-                i++;
-                indice++;
-            }
-            tam1 = indice;
-            sequencia2 = sequencia1 + 1;
-            indice = 0;
-            while(i < tamanho_da_mensagem && indice < 127){
-                dados[2][indice] = getc(fd);
-                i++;
-                indice++;
-            }
-            tam2 = indice;
-
-                msg.marcador_inicio = 126;
-                msg.controle.tipo = DADOS;
-                msg.controle.sequencia = sequencia0;
-                msg.controle.tamanho = tam0;
-                strcpy(msg.dados,dados[0]);
-                defineBuffer(&msg, buffer0);
-                msg.controle.sequencia = sequencia1;
-                msg.controle.tamanho = tam1;
-                strcpy(msg.dados,dados[1]);
-                defineBuffer(&msg, buffer1);
-                msg.controle.sequencia = sequencia2;
-                msg.controle.tamanho = tam2;
-                strcpy(msg.dados,dados[2]);
-                defineBuffer(&msg, buffer2);
-
-                try_send_data = 1;
-
-                while(try_send_data){
-
-                    envio = send(filedesk, buffer0, tamanhoMensagem(tam0), 0);
-                    envio = send(filedesk, buffer1, tamanhoMensagem(tam1), 0);
-                    envio = send(filedesk, buffer2, tamanhoMensagem(tam2), 0);
-
-                    reading = 1;
-                        while(reading){
-                            resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-                            if(*((unsigned char *)buffer) == 126){
-                                recuperaMensagem(&msg, buffer);
-                            if(msg.controle.tipo == ACK){
-                                reading = 0;
-                                try_send_data = 0;
-                                // incrementa a sequencia em tres somente após a garantia que enviei as tres
-                                msg.controle.sequencia = (msg.controle.sequencia + 3);
-                            }
-                            if(msg.controle.tipo == NACK){
-                                reading = 0;
-                            }
-                            // calcula temporização aqui tambem
-                        }
-                        *((unsigned char *)buffer) = 0;
-                }
-                if(i >= tamanho_da_mensagem){
-                    has_data_to_sent = 0;
+            
+            if((*((unsigned char *)buffer) == 126 && resp)){
+                recuperaMensagem(&msg, buffer);
+                if(msg.controle.tipo == OK){
+                    reading = 0;
+                    try_send_fd = 0;
+                }else if(msg.controle.tipo == ERRO){
+                    printf("Ocorreu um erro : %s\n",(char *) msg.dados);
+                    return;
+                }else{
+                    // calcula novo tempo para enviar o dado
+                    // reading = 0;
+                    // return;
                 }
             }
+            *((unsigned char *)buffer) = 0;
         }
+    }
+
+    // memset(buffer,0,TAMANHO_MAXIMO);
+
+    int i = 0;
+
+    // memset(msg.dados,0,TAMANHO_MAXIMO);
+
+    while(has_data_to_sent){
+
+
+
+        sequencia0 = msg.controle.sequencia;
+        indice = 0;
+        while(i < tamanho_da_mensagem && indice < 127){
+            dados[0][indice] = getc(fd);
+            i++;
+            indice++;
+        }
+        tam0 = indice;
+        sequencia1 = sequencia0 + 1;
+        indice = 0;
+        while(i < tamanho_da_mensagem && indice < 127){
+            dados[1][indice] = getc(fd);
+            i++;
+            indice++;
+        }
+        tam1 = indice;
+        sequencia2 = sequencia1 + 1;
+        indice = 0;
+        while(i < tamanho_da_mensagem && indice < 127){
+            dados[2][indice] = getc(fd);
+            i++;
+            indice++;
+        }
+        tam2 = indice;
 
         msg.marcador_inicio = 126;
-        msg.controle.tipo = FIM;
-        defineBuffer(&msg, buffer);
-        int temp = 0;
-        // tenta enviar mensagem de fim 5 vezes
-        while(temp < 5){
-            envio = send(filedesk, buffer, tamanhoMensagem(sizeof(FIM)), 0);
-            temp++;
+        msg.controle.tipo = DADOS;
+        msg.controle.sequencia = sequencia0;
+        msg.controle.tamanho = tam0;
+        strcpy(msg.dados,dados[0]);
+        defineBuffer(&msg, buffer0);
+        msg.controle.sequencia = sequencia1;
+        msg.controle.tamanho = tam1;
+        strcpy(msg.dados,dados[1]);
+        defineBuffer(&msg, buffer1);
+        msg.controle.sequencia = sequencia2;
+        msg.controle.tamanho = tam2;
+        strcpy(msg.dados,dados[2]);
+        defineBuffer(&msg, buffer2);
+
+        try_send_data = 1;
+
+        
+        envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+        envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+        envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
+
+        reading = 1;
+        while(reading){
+        
+            
+        
+        
+            resp = timeout(conexao, buffer);
+            if(!resp){
+                printf("demorou reenviando...");
+                envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+                envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+                envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);                         
+            }
+            // resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
+            if((*((unsigned char *)buffer) == 126) && resp){
+                recuperaMensagem(&msg, buffer);
+                if(msg.controle.tipo == ACK){
+                    reading = 0;
+                    try_send_data = 0;
+                    // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                    msg.controle.sequencia = (msg.controle.sequencia + 3);
+                }
+                if(msg.controle.tipo == NACK){
+                    reading = 0;
+                }
+                // calcula temporização aqui tambem'
+            }
+            *((unsigned char *)buffer) = 0;
         }
+        if(i >= tamanho_da_mensagem){
+            has_data_to_sent = 0;
+        }
+        
+    }
+
+    msg.marcador_inicio = 126;
+    msg.controle.tipo = FIM;
+    defineBuffer(&msg, buffer);
+    int temp = 0;
+    // tenta enviar mensagem de fim 5 vezes
+    while(temp < 5){
+        envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
+        temp++;
+    }
 
     fclose(fd);
     free(dados[0]);
