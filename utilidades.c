@@ -11,6 +11,9 @@
 #include <errno.h>
 
 
+unsigned char tabela[256];
+
+
 
 
 /**
@@ -62,6 +65,7 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
 
 }
 
+
 /**
  * Imprime localidades LOCAL e REMOTA.
 */
@@ -70,35 +74,6 @@ void imprimeLocalizacao(char *local,char *remoto){
     printf("%s \n", local);
     printf("\x1b[32m" "REMOTO" "\x1b[0m" ":\t");
     printf("%s \n", remoto);
-}
-
-int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho){
-    int resp;
-    
-    // Verifica se existe mensagens a serem lidas até tempo limite
-    resp = poll(fds, 1, TIMEOUT * 1000);
-
-    // Caso ocorra algum erro na verificação de do timeout
-    if(resp == -1){
-        printf("Erro na consulta de socket!\n");
-    }
-
-    // Caso tempo de espera tenha chegado ao fim.
-    if (!resp) {
-        printf("DEMOROU DEMAIS\n");
-        // Caso timeout, reenvie a mensagem de HANDSHAKE.
-        resp = write(fds[0].fd, buffer_send, tamanhoMensagem(tamanho));
-        printf("%d\n", resp);
-        if(resp < 0){
-            printf("Erro ao enviar Mensagem: HANDSHAKE\n");
-            exit(-1);
-        }
-    }
-    // Caso tudo ocorra normalmente.
-    if (fds[0].revents & POLLIN){
-        printf ("DEU BOM\n");
-        resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
-    }
 }
 
 int ordena(int *min,int *med, int *max){
@@ -162,6 +137,35 @@ int ordena(int *min,int *med, int *max){
  * ----- FUNÇÕES EXTERNAS. --------
  * --------------------------------
 */
+
+int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho){
+    int resp;
+    
+    // Verifica se existe mensagens a serem lidas até tempo limite
+    resp = poll(fds, 1, TIMEOUT * 1000);
+
+    // Caso ocorra algum erro na verificação de do timeout
+    if(resp == -1){
+        printf("Erro na consulta de socket!\n");
+    }
+
+    // Caso tempo de espera tenha chegado ao fim.
+    if (!resp) {
+        printf("DEMOROU DEMAIS\n");
+        // Caso timeout, reenvie a mensagem de HANDSHAKE.
+        resp = write(fds[0].fd, buffer_send, tamanhoMensagem(tamanho));
+        printf("%d\n", resp);
+        if(resp < 0){
+            printf("Erro ao enviar Mensagem: HANDSHAKE\n");
+            exit(-1);
+        }
+    }
+    // Caso tudo ocorra normalmente.
+    if (fds[0].revents & POLLIN){
+        printf ("DEU BOM\n");
+        resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
+    }
+}
 
 int tamanhoMensagem(int i){
 
@@ -1645,8 +1649,37 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     free(buffer2);
     free(msg.dados);
 }
-// how to debbug
 
-// fclose is god
+void calcula_tabela_crc(char *table){
 
-//volta got
+    __int8_t base = 0x7;
+    __int8_t byteAtual;
+    int max = 256;
+    for(int i = 0 ; i < max ;i++){
+        byteAtual = i;
+        for (int bit = 0; bit < 8; bit++)
+        {            
+            if ((byteAtual & 0x80) != 0)
+            {        
+                byteAtual <<= 1;
+                byteAtual ^= base;
+            }
+            else
+            {                
+                byteAtual <<= 1;
+            }
+        }
+        table[i] = byteAtual;
+    }
+}
+
+char calcula_crc(__int8_t *dados,int tamanho){
+
+    __uint8_t crc = 0;
+
+    for(int i = 0 ; i < tamanho; i++){
+        __uint8_t data = (dados[i] ^ crc);
+        crc = tabela[data];
+    }
+    return crc;
+}

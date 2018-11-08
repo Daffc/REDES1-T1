@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <poll.h>
+#include <linux/types.h>
 
     #define TAMANHO_MAXIMO 131
     #define TIMEOUT 2
@@ -104,6 +105,9 @@
 
     void get(int filedesk,char *local_remote,char *local_local,char *comando,int sequencia);
     void trata_get(int filedesk, Mensagem *msg);
+
+    char calcula_crc(__int8_t *dados,int tamanho);
+    void calcula_tabela_crc(char *table);
 
     
 
