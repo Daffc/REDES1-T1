@@ -863,7 +863,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
         envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
         while(reading){
             resp = timeout(conexao, buffer);
-            
+
             if(!resp){
                 envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
             }
@@ -1456,7 +1456,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 }
 
 ////////////////////////////////////////////////////////////////// TRATA GET REKT ////////////////////
-void trata_get(int filedesk,Mensagem *first_mensagem){
+void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
     char name[500];
     int sucess = 1;
@@ -1470,6 +1470,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     int resposta;
     int reading;
     void *buffer;
+    void *buffer_send;
     void *buffer0;
     void *buffer1;
     void *buffer2;
@@ -1478,6 +1479,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     int tamanho_da_mensagem;
     int tam0,tam1,tam2;
     int erro = 0;
+    int resp;
 
 
     char *dados[3];
@@ -1486,6 +1488,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     dados[1] = malloc(TAMANHO_MAXIMO);
     dados[2] = malloc(TAMANHO_MAXIMO);
     buffer = malloc(TAMANHO_MAXIMO);
+    buffer_send = malloc(TAMANHO_MAXIMO);
     buffer0 = malloc(TAMANHO_MAXIMO);
     buffer1 = malloc(TAMANHO_MAXIMO);
     buffer2 = malloc(TAMANHO_MAXIMO);
@@ -1548,15 +1551,21 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
             *((int *) msg.dados) = tamanho_da_mensagem;
             msg.controle.tipo = FD;
             msg.crc = 81;
-            defineBuffer(&msg, buffer);
+            defineBuffer(&msg, buffer_send);
 
-            envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);            
+            envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);            
 
             reading = 1;
 
             while(reading){
+                
+                resp = timeout(conexao, buffer);
+        
+                if(!resp){
+                    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+                }
 
-                resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+                resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
                     if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
                     if(msg.controle.tipo == OK){
@@ -1623,13 +1632,13 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
 
                 while(try_send_data){
 
-                    envio = send(filedesk, buffer0, tamanhoMensagem(tam0), 0);
-                    envio = send(filedesk, buffer1, tamanhoMensagem(tam1), 0);
-                    envio = send(filedesk, buffer2, tamanhoMensagem(tam2), 0);
+                    envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+                    envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+                    envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
 
                     reading = 1;
                         while(reading){
-                            resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
+                            resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
                             if(*((unsigned char *)buffer) == 126){
                                 recuperaMensagem(&msg, buffer);
                             if(msg.controle.tipo == ACK){
@@ -1664,7 +1673,7 @@ void trata_get(int filedesk,Mensagem *first_mensagem){
     msg.crc = 81;
     defineBuffer(&msg, buffer); 
 
-    envio = send(filedesk, buffer, tamanhoMensagem(sizeof(char)), 0);
+    envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(char)), 0);
 
     clear_dados:
 

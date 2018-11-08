@@ -104,7 +104,7 @@
     void trata_cd(int filedesk,Mensagem *msg);
 
     void get(int filedesk,char *local_remote,char *local_local,char *comando,int sequencia);
-    void trata_get(int filedesk, Mensagem *msg);
+    void trata_get(struct pollfd conexao[], Mensagem *msg);
 
     char calcula_crc(__int8_t *dados,int tamanho);
     void calcula_tabela_crc(char *table);
