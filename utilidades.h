@@ -61,19 +61,19 @@
      * Transfere Mensagem para buffer que será transmitido
     */
     void defineBuffer(Mensagem *msg, void * buffer);
-    void put(int filedesk, char *local , char*remoto , char *name);
+    void put(struct pollfd fds[], char *local , char*remoto , char *name);
     void trata_put(int filedesk,Mensagem *first_message);
     /**
      * Recupera Mensagem de buffer recebido
     */
     void recuperaMensagem(Mensagem * msg, void * buffer);
-    
+
     /**
      * Trata timeout de envio de mensagem, informada em 'buffer_send' e seu tamanho informado 
      * em 'tamanho', caso mensagem não retorne a tempo função retornará 0, caso mensagem volte
      * a tempo função retornará 1 e e buffer_read conterá mensagem recebida.
     */
-    int timeout(struct pollfd fds[], void *buffer_read, void* buffer_send, int tamanho);
+    int timeout(struct pollfd fds[], void *buffer_read);
 
 
     /**
