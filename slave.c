@@ -85,7 +85,7 @@ int main(int argc, char *argv[]){
                     trata_cd(fds[0].fd,&msg);
                     break;
                 case LS:
-                    trata_ls(fds[0].fd,&msg);
+                    trata_ls(fds,&msg);
                     break;
                 case GET:
                     trata_get(fds,&msg);

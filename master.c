@@ -113,7 +113,7 @@ int main(){
          * Caso comando inicie com a String "rls".
         */
         else if(strstr(comando, "rls") ==  comando){
-            retorno = remote_ls(fds[0].fd, remoto, comando, msg.controle.sequencia);
+            retorno = remote_ls(fds, remoto, comando, msg.controle.sequencia);
 
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
             if(retorno){
@@ -134,7 +134,7 @@ int main(){
         */
         else if(strstr(comando, "get") ==  comando){
             printf("COMANDO GET\n");
-            get(fds[0].fd,local,remoto,comando,msg.controle.sequencia);
+            get(fds,local,remoto,comando,msg.controle.sequencia);
         }
 
         /**

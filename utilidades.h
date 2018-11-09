@@ -98,12 +98,12 @@
      * 'local' indica posição de memória com localização atual do usuário.
     */
     int local_cd(char * comando, char * local);
-    void trata_ls(int conexao, Mensagem *first_mensagem);
-    int remote_ls(int conexao, char *remoto, char *comando, int sequencia);
+    void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem);
+    int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia);
     void remote_cd(int filedesk,char *local_remote,char *local_destino,int sequencia);
     void trata_cd(int filedesk,Mensagem *msg);
 
-    void get(int filedesk,char *local_remote,char *local_local,char *comando,int sequencia);
+    void get(struct pollfd conexao[],char *local_remote,char *local_local,char *comando,int sequencia);
     void trata_get(struct pollfd conexao[], Mensagem *msg);
 
     char calcula_crc(__int8_t *dados,int tamanho);

@@ -226,7 +226,7 @@ int local_ls(char * comando, char * local, char **bufferSaida){
         return 1;
 }
 
-int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
+int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia){
     // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
     // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
     // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
@@ -307,20 +307,43 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
 
         strcpy(msg.dados, operador);
 
-        // temporizar aqui tambem
-        if(main_loop){
+        msg.marcador_inicio = 126;
+        msg.controle.sequencia = last_seq;
+        msg.crc = 81;
+        msg.controle.tipo = LS;
+        msg.controle.tamanho = strlen(operador) + 1;
+       
+       
+        defineBuffer(&msg, buffer_send);    
+        envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
 
-            msg.marcador_inicio = 126;
-            msg.controle.sequencia = last_seq;
-            msg.crc = 81;
-            msg.controle.tipo = LS;
-            msg.controle.tamanho = strlen(operador) + 1;
-            defineBuffer(&msg, buffer_send);    
-            envio = send(conexao, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+        
+        int recebeMT;
+        int loop_rls = 1;
+        int resp;
+
+        while(loop_rls){
+            resp = timeout(conexao, buffer_read);
+            
+            if(!resp){
+                envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+            }
+            
+            if(*((unsigned char *)buffer_read) == 126){
+                recuperaMensagem(&msg, buffer_read);
+                if(msg.controle.tipo == MOSTRA_TELA){
+                    recebeMT = 0;
+                    loop_rls = 0;
+                } 
+            }
         }
 
         while(main_loop){
-            resposta = read(conexao, buffer_read, TAMANHO_MAXIMO);
+
+            if(recebeMT){
+                resposta = read(conexao[0].fd, buffer_read, TAMANHO_MAXIMO);
+            }
+
             if(*((unsigned char *)buffer_read) == 126){
                 recuperaMensagem(&msg, buffer_read);
                 switch(msg.controle.tipo){
@@ -333,31 +356,33 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
                         // printf("Recebi o primeiro dado tratando\n");
                         // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                         recuperaMensagem(&msg_resposta, buffer_read);
-                            // printf("Recebi as tres mensagens TCHAU\n");
-                            // printf("%d %d %d \n",msg_resposta.controle.tamanho,msg_resposta.controle.tamanho,msg_resposta.controle.tamanho);
-                            
-                            // Utilizar 'try' para verificar CRC.
-                            int try = 1;
-                            if(try){
-                                memcpy(impressor, msg_resposta.dados, msg_resposta.controle.tamanho);
-                                impressor[msg_resposta.controle.tamanho] = '\0';
-                                printf("%s", impressor);
+                        // printf("Recebi as tres mensagens TCHAU\n");
+                        // printf("%d %d %d \n",msg_resposta.controle.tamanho,msg_resposta.controle.tamanho,msg_resposta.controle.tamanho);
+                        
+                        // Utilizar 'try' para verificar CRC.
+                        int try = 1;
+                        if(try){
+                            memcpy(impressor, msg_resposta.dados, msg_resposta.controle.tamanho);
+                            impressor[msg_resposta.controle.tamanho] = '\0';
+                            printf("%s", impressor);
 
-                                msg.marcador_inicio = 126;
-                                msg.controle.tamanho = 1;
-                                msg.controle.sequencia = last_seq + 1;
-                                msg.controle.tipo = ACK;
-                                msg.crc = 81;
-                                defineBuffer(&msg, buffer_send);
-                            }else{
-                                msg.marcador_inicio = 126;
-                                msg.controle.tamanho = 1;
-                                msg.controle.sequencia = last_seq + 1;
-                                msg.controle.tipo = NACK;
-                                msg.crc = 81;
-                                defineBuffer(&msg, buffer_send);
-                            }
-                        envio = send(conexao, buffer_send, tamanhoMensagem(1), 0);
+                            msg.marcador_inicio = 126;
+                            msg.controle.tamanho = 1;
+                            msg.controle.sequencia = last_seq + 1;
+                            msg.controle.tipo = ACK;
+                            msg.crc = 81;
+                            defineBuffer(&msg, buffer_send);
+                        }else{
+                            msg.marcador_inicio = 126;
+                            msg.controle.tamanho = 1;
+                            msg.controle.sequencia = last_seq + 1;
+                            msg.controle.tipo = NACK;
+                            msg.crc = 81;
+                            defineBuffer(&msg, buffer_send);
+                        }
+                        envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(1), 0);
+                        // Habilita leitura de menságens dentro deste laço.
+                        recebeMT = 1;
                     break;
                     case FIM:
                         printf("\nRecebi FIM\n");
@@ -394,7 +419,7 @@ int remote_ls(int conexao, char *remoto, char *comando, int sequencia){
     }
 }
 
-void trata_ls(int conexao, Mensagem *first_mensagem){
+void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
 
     char comando[500], *bufferResposta;
     int sucess = 1;
@@ -409,6 +434,7 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
     void *buffer_envio;
     int indice;
     int tamanho_da_mensagem;
+    int resp;
 
 
     char *leitor;
@@ -484,32 +510,36 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
 
             try_send_data = 1;
 
-            while(try_send_data){
-                // printf("%s",(char*) msg.dados);
-                envio = send(conexao, buffer_envio, tamanhoMensagem(msg.controle.tamanho), 0);
+            send(conexao[0].fd, buffer_envio, tamanhoMensagem(msg.controle.tamanho), 0);
 
-                reading = 1;
-                while(reading){
-                    resposta = read(conexao, buffer, TAMANHO_MAXIMO);
-                    if(*((unsigned char *)buffer) == 126){
-                        recuperaMensagem(&msg, buffer);
-                        if(msg.controle.tipo == ACK){
-                            reading = 0;
-                            try_send_data = 0;
-                            // incrementa a sequencia em tres somente após a garantia que enviei as tres
-                            msg.controle.sequencia = (msg.controle.sequencia + 1);
-                        }
-                        if(msg.controle.tipo == NACK){
-                                reading = 0;
-                        }
-                        // calcula temporização aqui tambem
+            reading = 1;
+            while(reading){
+
+                resp = timeout(conexao, buffer);
+
+                if(!resp){
+                    send(conexao[0].fd, buffer_envio, tamanhoMensagem(msg.controle.tamanho), 0);
+                }
+
+                if((*((unsigned char *)buffer) == 126 && resp)){
+                    
+                    recuperaMensagem(&msg, buffer);
+                    if(msg.controle.tipo == ACK){
+                        reading = 0;
+                        try_send_data = 0;
+                        // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                        msg.controle.sequencia = (msg.controle.sequencia + 1);
                     }
-                    *((unsigned char *)buffer) = 0;
+                    if(msg.controle.tipo == NACK){
+                            reading = 0;
+                    }
+                    // calcula temporização aqui tambem
                 }
+                *((unsigned char *)buffer) = 0;
+            }
 
-                if(ponteiroResposta >= tamanho_da_mensagem){
-                    has_data_to_sent = 0;
-                }
+            if(ponteiroResposta >= tamanho_da_mensagem){
+                has_data_to_sent = 0;
             }
         }        
         msg.controle.tipo = FIM;
@@ -523,7 +553,7 @@ void trata_ls(int conexao, Mensagem *first_mensagem){
     msg.crc = 81;
     defineBuffer(&msg, buffer); 
 
-    envio = send(conexao, buffer, tamanhoMensagem(sizeof(char)), 0);
+    envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(char)), 0);
 
     clear_dados:
 
@@ -1223,7 +1253,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
     free(buffer_read);
 }
 ////////////////////////////////////////////////////////////////// GET REKT ////////////////////
-void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
+void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequencia){
     // envia o nome
     // abre write com esse nome
     // espera pela resposta OK
@@ -1299,30 +1329,41 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
 
     
 
-    // if(check_error){
-    //     msg.controle.tipo = ERRO;
-    //     strcpy(msg.dados,"PERMICAO");
-    //     msg.controle.tamanho = 9;
-    //     main_loop = 0;
-    // }else{
-    //     msg.controle.tipo = OK;
-    //     msg.controle.tamanho = 1;
-    // }
-    
-    // temporizar aqui tambem
-    if(main_loop){
+    int recebeFD;
+    int loop_get = 1;
+    int resp;
 
     msg.marcador_inicio = 126;
     msg.controle.sequencia = last_seq;
-    msg.crc = 81;
     msg.controle.tipo = GET;
     msg.controle.tamanho = strlen(operador) + 1;
+    msg.crc = 81;
+    
     defineBuffer(&msg, buffer_send);    
-        envio = send(filedesk, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+    
+    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+    while(loop_get){
+        resp = timeout(conexao, buffer_read);
+        
+        if(!resp){
+            envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+        }
+        
+        if(*((unsigned char *)buffer_read) == 126){
+            recuperaMensagem(&msg, buffer_read);
+            if(msg.controle.tipo == FD){
+                recebeFD = 0;
+                loop_get = 0;
+            } 
+        }
     }
+    
 
     while(main_loop){
-        resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+        if(recebeFD){
+            resposta = read(conexao[0].fd, buffer_read, TAMANHO_MAXIMO);
+        }
+
         if(*((unsigned char *)buffer_read) == 126){
             recuperaMensagem(&msg, buffer_read);
             switch(msg.controle.tipo){
@@ -1334,7 +1375,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                     erro = 1;
                 break;
                 case FD:
-                fp = fopen(name,"w");
+                    fp = fopen(name,"w");
                     if(fp == NULL){
                         printf("erro ao criar fd do arquivo : %s \n",name);
                         printf("mensagem de erro : %s", strerror(errno));
@@ -1358,29 +1399,28 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                     defineBuffer(&msg, buffer_send);
                     // adiciona o file descriptor ...
                     // em todo caso para teste ira enviar ok
-                    envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
+                    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(1), 0);
+                    // Habilita leitura de menságens dentro deste laço.
+                    recebeFD = 1;
                 break;
                 case DADOS:
-                    printf("Recebi o primeiro dado tratando\n");
                     // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                     recuperaMensagem(&msgs[0], buffer_read);
                     cont = 1;
                     while(cont < 3){
-                        resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+                        resposta = read(conexao[0].fd, buffer_read, TAMANHO_MAXIMO);
                         if(*((unsigned char *)buffer_read) == 126){
                             recuperaMensagem(&msgs[cont], buffer_read);
                             cont++;
                             *((unsigned char *)buffer_read) = 0;
                         }
                     }
-                    printf("Recebi as tres mensagens TCHAU\n");
                     min = msgs[0].controle.sequencia;
                     med = msgs[1].controle.sequencia;
                     max = msgs[2].controle.sequencia;
 
                     int try = ordena(&min,&med,&max);
 
-                    printf("%d %d %d \n",msgs[0].controle.tamanho,msgs[1].controle.tamanho,msgs[2].controle.tamanho);
                     if(try){
 
                         if(min == msgs[0].controle.sequencia){
@@ -1431,7 +1471,7 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                         msg.crc = 81;
                         defineBuffer(&msg, buffer_send);
                     }
-                    envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
+                    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(1), 0);
                 break;
                 case FIM:
                     printf("Recebi FIM\n");
@@ -1439,8 +1479,6 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                 break;
             }
             // *((unsigned char *)buffer_read) = 0;
-
-            printf("sai do case/switch\n");
         }
         // criar um temporizador e renviar a mensagem
         // mensagens de confirmação sempre tem o tamanho 1
