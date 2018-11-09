@@ -65,9 +65,9 @@
     void put(struct pollfd fds[], char *local , char*remoto , char *name);
     void trata_put(int filedesk,Mensagem *first_message);
     /**
-     * Recupera Mensagem de buffer recebido
+     * Recupera Mensagem de buffer recebido e verifica crc de bonus
     */
-    void recuperaMensagem(Mensagem * msg, void * buffer);
+    int recuperaMensagem(Mensagem * msg, void * buffer);
 
     /**
      * Trata timeout de envio de mensagem, informada em 'buffer_send' e seu tamanho informado 
@@ -106,8 +106,8 @@
     void get(struct pollfd conexao[],char *local_remote,char *local_local,char *comando,int sequencia);
     void trata_get(struct pollfd conexao[], Mensagem *msg);
 
-    char calcula_crc(__int8_t *dados,int tamanho);
-    void calcula_tabela_crc(char *table);
+    unsigned char calcula_crc(__int8_t *dados,int tamanho);
+    void calcula_tabela_crc();
 
     
 

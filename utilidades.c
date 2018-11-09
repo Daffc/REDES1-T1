@@ -40,14 +40,26 @@ void removeEspacos(char * origem, char * destino){
 
 void defineBuffer(Mensagem * msg, void * buffer){
 
+    void *buffer_crc;
+    unsigned char crc = calcula_crc(buffer_crc,msg->controle.tamanho + 2);
+    buffer_crc = malloc(TAMANHO_MAXIMO + 2);
+
+    memcpy(buffer_crc,&(msg->controle),2);
+    memcpy(buffer_crc + 2, msg->dados, msg->controle.tamanho);
+
     memcpy(buffer, &(msg->marcador_inicio), 1);
     memcpy(buffer + 1, &(msg->controle), 2);
     memcpy(buffer + 3, msg->dados, msg->controle.tamanho);
-    memcpy(buffer + 3 + msg->controle.tamanho, &(msg->crc), 1);
+    memcpy(buffer + 3 + msg->controle.tamanho, &crc, 1);  
+  
+    free(buffer_crc);
 }
 
 
-void recuperaMensagem(Mensagem * msg, void * buffer){
+int recuperaMensagem(Mensagem * msg, void * buffer){
+
+    void *buffer_crc;
+    buffer_crc = malloc(TAMANHO_MAXIMO + 2);
 
     // Guarda Marcador de início;
     memcpy(&(msg->marcador_inicio), buffer, 1);
@@ -63,7 +75,18 @@ void recuperaMensagem(Mensagem * msg, void * buffer){
     // Guarda crc.
     memcpy(&(msg->crc),buffer + 3 + msg->controle.tamanho, 1);
 
+    memcpy(buffer_crc,&(msg->controle),2);
+    memcpy(buffer_crc + 2, msg->dados, msg->controle.tamanho);
+
+
+    int verifica_crc = (msg->crc == calcula_crc(buffer_crc,msg->controle.tamanho + 2 ));
+
+    free(buffer_crc);
+
+    return verifica_crc;
+
 }
+
 
 
 /**
@@ -330,7 +353,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
             }
             
             if(*((unsigned char *)buffer_read) == 126){
-                recuperaMensagem(&msg, buffer_read);
+                recuperaMensagem(&msg, buffer_read)
                 if(msg.controle.tipo == MOSTRA_TELA){
                     recebeMT = 0;
                     loop_rls = 0;
@@ -1743,7 +1766,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     free(msg.dados);
 }
 
-void calcula_tabela_crc(char *table){
+void calcula_tabela_crc(){
 
     __int8_t base = 0x7;
     __int8_t byteAtual;
@@ -1762,11 +1785,11 @@ void calcula_tabela_crc(char *table){
                 byteAtual <<= 1;
             }
         }
-        table[i] = byteAtual;
+        tabela[i] = byteAtual;
     }
 }
 
-char calcula_crc(__int8_t *dados,int tamanho){
+unsigned char calcula_crc(__int8_t *dados,int tamanho){
 
     __uint8_t crc = 0;
 
