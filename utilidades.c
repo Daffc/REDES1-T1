@@ -1007,7 +1007,9 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                     msg.controle.sequencia = (msg.controle.sequencia + 3);
                 }
                 if(msg.controle.tipo == NACK){
-                    reading = 0;
+                        envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+                        envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+                        envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);   
                 }
                 // calcula temporização aqui tambem'
             }
@@ -1187,6 +1189,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                             msg.crc = 81;
                             defineBuffer(&msg, buffer_send);
                         }else{
+                            printf("!!!!!!!!!!! MANDEI NACK !!!!!!!!!!!!!!!!!!!");
                             msg.marcador_inicio = 126;
                             msg.controle.tamanho = 1;
                             msg.controle.sequencia = last_seq + 1;
@@ -1332,18 +1335,18 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                 break;
                 case FD:
                 fp = fopen(name,"w");
-                if(fp == NULL){
-                    printf("erro ao criar fd do arquivo : %s \n",name);
-                    printf("mensagem de erro : %s", strerror(errno));
-                    main_loop = 0;
-                }
+                    if(fp == NULL){
+                        printf("erro ao criar fd do arquivo : %s \n",name);
+                        printf("mensagem de erro : %s", strerror(errno));
+                        main_loop = 0;
+                    }
 
-                check_error = access(name, W_OK);
+                    check_error = access(name, W_OK);
 
-                if(check_error){
-                    printf("Erro de access no arquivo : %s\n", strerror(errno));
-                    main_loop = 0;
-                }
+                    if(check_error){
+                        printf("Erro de access no arquivo : %s\n", strerror(errno));
+                        main_loop = 0;
+                    }
                     // sizeofmessage = (int *) msgs[0].dados;
                     // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
                     sizeofmessage = *((int *) msg.dados);
@@ -1362,71 +1365,72 @@ void get(int filedesk,char *local,char *remoto,char *comando,int sequencia){
                     // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                     recuperaMensagem(&msgs[0], buffer_read);
                     cont = 1;
-                        while(cont < 3){
-                            resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
-                            if(*((unsigned char *)buffer_read) == 126){
-                                recuperaMensagem(&msgs[cont], buffer_read);
-                                cont++;
-                                *((unsigned char *)buffer_read) = 0;
-                            }
+                    while(cont < 3){
+                        resposta = read(filedesk, buffer_read, TAMANHO_MAXIMO);
+                        if(*((unsigned char *)buffer_read) == 126){
+                            recuperaMensagem(&msgs[cont], buffer_read);
+                            cont++;
+                            *((unsigned char *)buffer_read) = 0;
                         }
-                        printf("Recebi as tres mensagens TCHAU\n");
-                        min = msgs[0].controle.sequencia;
-                        med = msgs[1].controle.sequencia;
-                        max = msgs[2].controle.sequencia;
+                    }
+                    printf("Recebi as tres mensagens TCHAU\n");
+                    min = msgs[0].controle.sequencia;
+                    med = msgs[1].controle.sequencia;
+                    max = msgs[2].controle.sequencia;
 
-                        int try = ordena(&min,&med,&max);
+                    int try = ordena(&min,&med,&max);
 
-                        printf("%d %d %d \n",msgs[0].controle.tamanho,msgs[1].controle.tamanho,msgs[2].controle.tamanho);
-                        if(try){
+                    printf("%d %d %d \n",msgs[0].controle.tamanho,msgs[1].controle.tamanho,msgs[2].controle.tamanho);
+                    if(try){
 
-                            if(min == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
-                            }else if(min == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
-                            }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
-                            }
-
-                            if(med == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
-                            }else if(med == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
-                            }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
-                            }
-
-                            if(max == msgs[0].controle.sequencia){
-                                fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
-                            }else if(max == msgs[1].controle.sequencia){
-                                fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
-                            }else{
-                                fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
-                            }
-
-                            msg.marcador_inicio = 126;
-                            msg.controle.tamanho = 1;
-                            msg.controle.sequencia = last_seq + 1;
-                            msg.controle.tipo = ACK;
-                            msg.crc = 81;
-                            defineBuffer(&msg, buffer_send);
+                        if(min == msgs[0].controle.sequencia){
+                            fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[0].dados);
+                        }else if(min == msgs[1].controle.sequencia){
+                            fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[1].dados);
                         }else{
-                            msg.marcador_inicio = 126;
-                            msg.controle.tamanho = 1;
-                            msg.controle.sequencia = last_seq + 1;
-                            msg.controle.tipo = NACK;
-                            msg.crc = 81;
-                            defineBuffer(&msg, buffer_send);
+                            fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[2].dados);
                         }
+
+                        if(med == msgs[0].controle.sequencia){
+                            fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[0].dados);
+                        }else if(med == msgs[1].controle.sequencia){
+                            fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[1].dados);
+                        }else{
+                            fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[2].dados);
+                        }
+
+                        if(max == msgs[0].controle.sequencia){
+                            fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[0].dados);
+                        }else if(max == msgs[1].controle.sequencia){
+                            fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[1].dados);
+                        }else{
+                            fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
+                            // printf("%s\n",(char *) msgs[2].dados);
+                        }
+
+                        msg.marcador_inicio = 126;
+                        msg.controle.tamanho = 1;
+                        msg.controle.sequencia = last_seq + 1;
+                        msg.controle.tipo = ACK;
+                        msg.crc = 81;
+                        defineBuffer(&msg, buffer_send);
+
+                    }else{
+                        msg.marcador_inicio = 126;
+                        msg.controle.tamanho = 1;
+                        msg.controle.sequencia = last_seq + 1;
+                        msg.controle.tipo = NACK;
+                        msg.crc = 81;
+                        defineBuffer(&msg, buffer_send);
+                    }
                     envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
                 break;
                 case FIM:
@@ -1563,10 +1567,9 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
         
                 if(!resp){
                     envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
-                }
+                } 
 
-                resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
-                    if(*((unsigned char *)buffer) == 126){
+                if(*((unsigned char *)buffer) == 126){
                     recuperaMensagem(&msg, buffer);
                     if(msg.controle.tipo == OK){
                         reading = 0;
@@ -1587,7 +1590,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
         int i = 0;
 
         while(has_data_to_sent){
-
+            
             sequencia0 = msg.controle.sequencia;
             indice = 0;
             while(i < tamanho_da_mensagem && indice < 127){
@@ -1613,46 +1616,50 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
             }
             tam2 = indice;
 
-                msg.marcador_inicio = 126;
-                msg.controle.tipo = DADOS;
-                msg.controle.sequencia = sequencia0;
-                msg.controle.tamanho = tam0;
-                strcpy(msg.dados,dados[0]);
-                defineBuffer(&msg, buffer0);
-                msg.controle.sequencia = sequencia1;
-                msg.controle.tamanho = tam1;
-                strcpy(msg.dados,dados[1]);
-                defineBuffer(&msg, buffer1);
-                msg.controle.sequencia = sequencia2;
-                msg.controle.tamanho = tam2;
-                strcpy(msg.dados,dados[2]);
-                defineBuffer(&msg, buffer2);
+            msg.marcador_inicio = 126;
+            msg.controle.tipo = DADOS;
+            msg.controle.sequencia = sequencia0;
+            msg.controle.tamanho = tam0;
+            strcpy(msg.dados,dados[0]);
+            defineBuffer(&msg, buffer0);
+            msg.controle.sequencia = sequencia1;
+            msg.controle.tamanho = tam1;
+            strcpy(msg.dados,dados[1]);
+            defineBuffer(&msg, buffer1);
+            msg.controle.sequencia = sequencia2;
+            msg.controle.tamanho = tam2;
+            strcpy(msg.dados,dados[2]);
+            defineBuffer(&msg, buffer2);
 
-                try_send_data = 1;
+            envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+            envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+            envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
 
-                while(try_send_data){
+            reading = 1;
 
+            while(reading){
+                resp = timeout(conexao, buffer);
+    
+                if(!resp){
                     envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
                     envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
                     envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
-
-                    reading = 1;
-                        while(reading){
-                            resposta = read(conexao[0].fd, buffer, TAMANHO_MAXIMO);
-                            if(*((unsigned char *)buffer) == 126){
-                                recuperaMensagem(&msg, buffer);
-                            if(msg.controle.tipo == ACK){
-                                reading = 0;
-                                try_send_data = 0;
-                                // incrementa a sequencia em tres somente após a garantia que enviei as tres
-                                msg.controle.sequencia = (msg.controle.sequencia + 3);
-                            }
-                            if(msg.controle.tipo == NACK){
-                                reading = 0;
-                            }
-                            // calcula temporização aqui tambem
-                        }
-                        *((unsigned char *)buffer) = 0;
+                } 
+                
+                if((*((unsigned char *)buffer) == 126) && resp){
+                    recuperaMensagem(&msg, buffer);
+                    if(msg.controle.tipo == ACK){
+                        reading = 0;
+                        try_send_data = 0;
+                        // incrementa a sequencia em tres somente após a garantia que enviei as tres
+                        msg.controle.sequencia = (msg.controle.sequencia + 3);
+                    }
+                    if(msg.controle.tipo == NACK){
+                            envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
+                            envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
+                            envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
+                    }
+                    // calcula temporização aqui tambem
                 }
                 if(i >= tamanho_da_mensagem){
                     has_data_to_sent = 0;
@@ -1683,6 +1690,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     free(dados[0]);
     free(dados[1]);
     free(dados[2]);
+    free(buffer_send);
     free(buffer);
     free(buffer0);
     free(buffer1);

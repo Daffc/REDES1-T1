@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <pwd.h>
+#include <poll.h>
 
 
 void handshakeMsg(Mensagem * msg){
@@ -36,13 +37,14 @@ void handshakeMsg(Mensagem * msg){
 
 int main(int argc, char *argv[]){
 
-
-    int conexao;
     int saidaread;
     int estado, estado2;
     void *buffer;
 
-    conexao = ConexaoRawSocket("eno1");
+    struct pollfd fds[1];
+
+    fds[0].fd = ConexaoRawSocket("eno1");
+    fds[0].events = POLLIN;
 
     Mensagem    msg;
     msg.dados = malloc(127);
@@ -51,7 +53,7 @@ int main(int argc, char *argv[]){
 
     while(1){
         
-        estado = read(conexao, buffer, TAMANHO_MAXIMO);
+        estado = read(fds[0].fd, buffer, TAMANHO_MAXIMO);
 
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
         if(*((unsigned char *)buffer) == 126){
@@ -76,20 +78,20 @@ int main(int argc, char *argv[]){
                     msg.crc = 81;
 
                     defineBuffer(&msg, buffer);
-                    write(conexao, buffer, tamanhoMensagem(msg.controle.tamanho));
+                    write(fds[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho));
                     memset(buffer, 0, TAMANHO_MAXIMO);
                     break;
                 case CD:
-                    trata_cd(conexao,&msg);
+                    trata_cd(fds[0].fd,&msg);
                     break;
                 case LS:
-                    trata_ls(conexao,&msg);
+                    trata_ls(fds[0].fd,&msg);
                     break;
                 case GET:
-                    trata_get(conexao,&msg);
+                    trata_get(fds,&msg);
                     break;
                 case PUT:
-                    trata_put(conexao,&msg);
+                    trata_put(fds[0].fd,&msg);
                     break;
             }            
         }       
