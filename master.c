@@ -39,28 +39,42 @@ int main(){
 
     defineBuffer(&msg, buffer_send);   
     
+    write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
 
     int received = 1;
     while(received){
 
         //Envia mensagem solicitando Informações do servidor (Caminho do iretório onde servido esta sendo executado).    
-        write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
+        
         
 
         resp = timeout(fds, buffer_read);
         
+        if(!resp){
+            write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
+        }
+        
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if((*((unsigned char *)buffer_read) == 126) && resp && recuperaMensagem(&msg, buffer_read)){
+        if((*((unsigned char *)buffer_read) == 126) && resp){
+            if(recuperaMensagem(&msg, buffer_read)){
 
-            printf("%d\t", msg.marcador_inicio);
-            printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-            printf("%s\t", (char *)msg.dados);
-            printf("%d\n", msg.crc);
+                printf("%d\t", msg.marcador_inicio);
+                printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
+                printf("%s\t", (char *)msg.dados);
+                printf("%d\n", msg.crc);
 
-            uName = getpwuid(geteuid ())->pw_dir;
-            strcpy(remoto, msg.dados);
-            getcwd(local, 500);
-            received = 0;
+                uName = getpwuid(geteuid ())->pw_dir;
+                strcpy(remoto, msg.dados);
+                getcwd(local, 500);
+                received = 0;
+            }else{
+
+                msg.controle.tipo = NACK;
+                msg.marcador_inicio = 126;
+                msg.controle.tamanho = 0;
+                msg.controle.sequencia = 0;
+                defineBuffer(&msg, buffer_send);
+            }
         }
         
     }
