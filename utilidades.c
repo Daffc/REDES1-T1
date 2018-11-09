@@ -648,15 +648,18 @@ int local_cd(char * comando, char * local){
     }
 }
 
-void remote_cd(int filedesk, char *local,char *comando, int sequencia){
+void remote_cd(struct pollfd conexao[], char *local,char *comando, int sequencia){
 
     char        operador[500], semEspacos[500];
     int         envio,resposta,reading;
     Mensagem    msg;
     void        *buffer;
+    void        *buffer_send;
+    int         resp;
 
     msg.dados = malloc(127);    
     buffer = malloc(TAMANHO_MAXIMO);
+    buffer_send = malloc(TAMANHO_MAXIMO);
 
     /**
      * Remove espaços de comando e guarda resultado em operador.
@@ -680,16 +683,22 @@ void remote_cd(int filedesk, char *local,char *comando, int sequencia){
     strcpy(msg.dados, operador);
     msg.crc = 81;
 
-    defineBuffer(&msg, buffer);
+    defineBuffer(&msg, buffer_send);
 
-    envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+    send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
 
     *((unsigned char *)buffer) = 0;
 
     reading = 1;
     while(reading){
-        resposta = read(filedesk, buffer, TAMANHO_MAXIMO);
-            if(*((unsigned char *)buffer) == 126){
+
+        resp = timeout(conexao, buffer);
+
+        if(!resp){
+            send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+        }
+
+        if((*((unsigned char *)buffer) == 126) && resp){
             
             recuperaMensagem(&msg, buffer);
 
@@ -729,11 +738,9 @@ void remote_cd(int filedesk, char *local,char *comando, int sequencia){
                 }
                 free(msg.dados);
                 return;
-            }else{
+            }else if(msg.controle.tipo == NACK){
                 // calcula novo tempo para enviar o dado
-                reading = 0;
-                free(msg.dados);
-                return;
+                send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
             }
         }
         *((unsigned char *)buffer) = 0;

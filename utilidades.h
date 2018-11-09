@@ -100,7 +100,7 @@
     int local_cd(char * comando, char * local);
     void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem);
     int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia);
-    void remote_cd(int filedesk,char *local_remote,char *local_destino,int sequencia);
+    void remote_cd(struct pollfd conexao[], char *local,char *comando, int sequencia);
     void trata_cd(int filedesk,Mensagem *msg);
 
     void get(struct pollfd conexao[],char *local_remote,char *local_local,char *comando,int sequencia);

@@ -126,7 +126,7 @@ int main(){
         */
         else if(strstr(comando, "rcd") ==  comando){
             printf("COMANDO RCD\n");
-            remote_cd(fds[0].fd, remoto, comando, msg.controle.sequencia);
+            remote_cd(fds, remoto, comando, msg.controle.sequencia);
         }
 
         /**
