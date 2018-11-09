@@ -353,7 +353,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
             }
             
             if(*((unsigned char *)buffer_read) == 126){
-                recuperaMensagem(&msg, buffer_read)
+                recuperaMensagem(&msg, buffer_read);
                 if(msg.controle.tipo == MOSTRA_TELA){
                     recebeMT = 0;
                     loop_rls = 0;

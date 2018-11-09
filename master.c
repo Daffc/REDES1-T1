@@ -25,6 +25,8 @@ int main(){
     buffer_send = malloc(TAMANHO_MAXIMO);
     buffer_read = malloc(TAMANHO_MAXIMO);
 
+    calcula_tabela_crc();
+
     msg.dados = malloc(127);
 
 
@@ -48,9 +50,7 @@ int main(){
         resp = timeout(fds, buffer_read);
         
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if((*((unsigned char *)buffer_read) == 126) && resp){
-
-            recuperaMensagem(&msg, buffer_read);
+        if((*((unsigned char *)buffer_read) == 126) && resp && recuperaMensagem(&msg, buffer_read)){
 
             printf("%d\t", msg.marcador_inicio);
             printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);

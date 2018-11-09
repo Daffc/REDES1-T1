@@ -46,6 +46,8 @@ int main(int argc, char *argv[]){
     fds[0].fd = ConexaoRawSocket("eno1");
     fds[0].events = POLLIN;
 
+    calcula_tabela_crc();
+
     Mensagem    msg;
     msg.dados = malloc(127);
 
