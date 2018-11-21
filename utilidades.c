@@ -1511,18 +1511,19 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                             main_loop = 0;
                             erro = 1;
                             last_seq = (msg.controle.sequencia + 1) % 32;
+                            msg.controle.tipo = ERRO;
+                            msg.controle.tamanho = 1;
+                            *((char *)msg.dados) = errno;
                         }
-                        check_error = access(name, W_OK);
-                        if(check_error){
-                            printf("Erro de access no arquivo : %s\n", strerror(errno));
-                            main_loop = 0;
+                        else{
+                            msg.controle.tipo = OK;
+                            msg.controle.tamanho = 0;
                         }
 
                         sizeofmessage = *((int *) msg.dados);
-                        msg.marcador_inicio = 126;
-                        msg.controle.tamanho = 0;
+                        msg.marcador_inicio = 126;                        
                         msg.controle.sequencia = last_seq;
-                        msg.controle.tipo = OK;
+                        
                         defineBuffer(&msg, buffer_send);
                         // adiciona o file descriptor ...
                         // em todo caso para teste ira enviar ok
@@ -1771,6 +1772,12 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
                             reading = 0;
                             try_send_fd = 0;
                             last_seq = (msg.controle.sequencia + 1) % 32;
+                        }
+                        if(msg.controle.tipo == ERRO){
+                            reading = 0;
+                            try_send_fd = 0;
+                            last_seq = (msg.controle.sequencia + 1) % 32;
+                            goto clear_dados;
                         }
                     }else{
                         envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
