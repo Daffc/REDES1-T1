@@ -200,8 +200,6 @@ int local_ls(char * comando, char * local, char **bufferSaida){
     char    retorno, operador[100];
     long int     i = 0;
 
-    *bufferSaida = malloc(1000);
-
     FILE    *fpls = NULL;
 
     /**
@@ -223,13 +221,13 @@ int local_ls(char * comando, char * local, char **bufferSaida){
         fpls = IniciaDescritorLs("ls -la", local);
     }
 
-
-
-
     /**
      * Caso Stream conectando a resposta seja definida, imprime resuldato.
     */
     if(fpls){
+
+        *bufferSaida = malloc(1000);
+        
         /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
         while ((retorno = getc(fpls)) != EOF) {
             (*bufferSaida)[i] = retorno ;
@@ -379,6 +377,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
 
             if(*((unsigned char *)buffer_read) == 126){
                 if(recuperaMensagem(&msg, buffer_read)){
+                    // printf(" ** %s\n", (char *)msg.dados);
                     switch(msg.controle.tipo){
                         case ERRO:
                             printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
@@ -471,7 +470,7 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
     int last_seq;
     int envio;
     int reading;
-    int ponteiroResposta = 0;
+    unsigned long int ponteiroResposta = 0;
     void *buffer;
     void *buffer_envio;
     int indice;
@@ -481,7 +480,8 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
 
     char *leitor;
 
-    leitor = malloc(TAMANHO_MAXIMO);
+    leitor = malloc(128);
+    leitor[127] = '\0';
 
     buffer = malloc(TAMANHO_MAXIMO);
     buffer_envio = malloc(TAMANHO_MAXIMO);
@@ -698,15 +698,15 @@ int local_cd(char * comando, char * local){
     }
 }
 
-void remote_cd(struct pollfd conexao[], char *local,char *comando, int sequencia){
+void remote_cd(struct pollfd conexao[], char *local, char *comando, int sequencia){
 
     char        operador[500], semEspacos[500];
-    int         envio,resposta,reading;
+    int         envio, resposta, reading;
     Mensagem    msg;
     void        *buffer;
     void        *buffer_send;
     int         resp;
-    int erro;
+    int         erro;
 
     msg.dados = malloc(127);
     buffer = malloc(TAMANHO_MAXIMO);
@@ -800,7 +800,7 @@ void remote_cd(struct pollfd conexao[], char *local,char *comando, int sequencia
 }
 
 
-void trata_cd(int filedesk, Mensagem *first_mensagem){
+void trata_cd(int conexao, Mensagem *first_mensagem){
 
     Mensagem    msg;
     void *buffer;
@@ -810,7 +810,6 @@ void trata_cd(int filedesk, Mensagem *first_mensagem){
 
     msg.marcador_inicio = 126;
     msg.controle.sequencia = first_mensagem->controle.sequencia + 1;
-    msg.crc = 0;
 
     printf("CAMINHO \n %s\n ",  (char *)first_mensagem->dados);
 
@@ -831,7 +830,7 @@ void trata_cd(int filedesk, Mensagem *first_mensagem){
     defineBuffer(&msg, buffer);
     sendingAnswer = 1;
 
-    int envio = send(filedesk, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
+    int envio = send(conexao, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
 
     free(msg.dados);
 }
@@ -859,15 +858,13 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     //strcpy(name,&semEspacos[3]);
 
     printf("comando com endereço relativo remoto %s\n",operador);
-    printf("tamanho do operador : %ld",strlen(operador));
+    printf("tamanho do operador : %ld\n",strlen(operador));
     printf("comando com endereço relativo local %s\n",name);
 
     // char semEspacos[500];
     // removeEspacos(name, semEspacos);
     printf("%s\n",name);
-    int check_file;
-    check_file = access(name,F_OK);
-    if( errno == ENOENT){
+    if(access(name,F_OK)){
         printf("mensagem de erro :%s\n",strerror(errno));
         printf("No such file or directory \n");
         return;
