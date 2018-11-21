@@ -470,7 +470,6 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
     int has_data_to_sent = 1;
     int last_seq;
     int envio;
-    int resposta;
     int reading;
     int ponteiroResposta = 0;
     void *buffer;
@@ -841,9 +840,9 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
 
 
-    printf("endereço relativo local %s\n",local);
-    printf("endereço relativo remoto %s\n",remoto);
-    printf("tipo do comando %s\n",comando);
+    // printf("endereço relativo local %s\n",local);
+    // printf("endereço relativo remoto %s\n",remoto);
+    // printf("tipo do comando %s\n",comando);
 
     char name[500];
     char operador[500], semEspacos[500];
@@ -888,24 +887,58 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
         return;
     }
 
+    // controla se o nome foi enviado
     int try_send_name = 1;
+
+    // controla se o file desk foi enviado
     int try_send_fd = 1;
+
+    // controla o envio dos dados
     int try_send_data = 1;
+
+    // controla o envio do vim
     int try_send_fim = 1;
+
+    // controla se existe dados para envio
     int has_data_to_sent = 1;
+
+    // controla a sequencia de acordo com a ultima mensagem
     int last_seq;
+
+    // guarda valor do send()
     int envio;
-    int resposta;
+
+    // controla a espera de mensagem
     int reading;
+
+    // auxiliar no timeout
     int resp;
+
+    // buffer que recebe mensagem
     void *buffer;
+
+    // buffer que envia mensagem
     void *buffer_send;
+
+    // buffer de envio da primeira mensagem
     void *buffer0;
+
+    // buffer de envio da segunda mensagem
     void *buffer1;
+
+    // buffer de envio da terceira mensagem
     void *buffer2;
+
+    // controla o tamanho da mensagem
     int indice;
+
+    // controla a sequencia de cada mensagem
     int sequencia0,sequencia1,sequencia2;
+
+    // contem tamnho da mensagem
     int tamanho_da_mensagem;
+
+    // controla o tamanho das mensagens uma a uma
     int tam0,tam1,tam2;
 
 
@@ -934,8 +967,8 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     // devolve o ponteiro no inicio do file descriptor
     rewind(fd);
 
-    last_seq = msg.controle.sequencia;
-    last_seq += 1;
+    last_seq = (msg.controle.sequencia + 1) % 32;
+    
 
 
     while(try_send_name){
@@ -965,9 +998,11 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                     if(msg.controle.tipo == OK){
                         try_send_name = 0;
                         reading = 0;
+                        last_seq = ( msg.controle.sequencia + 1 ) % 32;
                     }else if(msg.controle.tipo == ERRO){
                         // Arrumar uma maneira de arrumar isso
                         printf("Ocorreu um erro : %s\n",(char *) msg.dados);
+                        last_seq = ( msg.controle.sequencia + 1 ) % 32;
                         goto saida_put;
                     }
                 }else{
@@ -978,8 +1013,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
             }
         }
     }
-
-    last_seq++;
+    
 
     // apos enviar o nome tenta enviar o file descriptor
     while(try_send_fd){
@@ -1008,6 +1042,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                     if(msg.controle.tipo == OK){
                         reading = 0;
                         try_send_fd = 0;
+                        last_seq = ( msg.controle.sequencia + 1 ) % 32;
                     }
                 }else{
                     envio = send(conexao[0].fd, buffer, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -1085,7 +1120,8 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                             reading = 0;
                             try_send_data = 0;
                             // incrementa a sequencia em tres somente após a garantia que enviei as tres
-                            msg.controle.sequencia = (msg.controle.sequencia + 3);
+                            msg.controle.sequencia = (msg.controle.sequencia + 1);
+                            last_seq = msg.controle.sequencia;
                         }
                         if(msg.controle.tipo == NACK){
                                 envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
@@ -1110,6 +1146,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
     msg.marcador_inicio = 126;
     msg.controle.tipo = FIM;
+    msg.controle.sequencia = last_seq;
     defineBuffer(&msg, buffer);
     int temp = 0;
 
@@ -1135,23 +1172,46 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 void trata_put(int filedesk, Mensagem *first_msg){
 
     printf("iniciando put ... \n");
-    int check_file = 0;
+
+
+    // int check_file = 0;
+
+
+    // verifica existencia de erro
     int check_error = 0;
+
+    // guarda valor do send()
     int envio;
+
+    // guarda valor do read()
     int resposta;
+
     // esse buffer fica responsavel por enviar sempre a ultima resposta
-    void *buffer_send;
+    void *buffer_send;    // lembre-se do free mate
+
     // esse buffer fica reponsavel por receber os dados do cliente
     void *buffer_read;
+
     // controla o loop principal
     int main_loop = 1;
+
+    // controla a sequencia de acordo com a ultima mensagem
     int last_seq;
+
+    // variaveis auxiliares para identificar a sequencia da mensagem
     int min,med,max;
+
+    // variavel auxiliar para contar as mensagens recebidas
     int cont = 0;
+
+    // usada para pegar o tamanho da mensagem que esta sendo recebida
     int sizeofmessage;
+
+    // redebe o nome do arquivo
     char name[500];
+
+    // checa se os crcs estão sem erro
     int crcs[3];
-    // lembre-se do free mate
 
     // tenta criar um arquivo e devolve resposta de sucesso com o nome...
     Mensagem msg,msgs[3];
@@ -1162,10 +1222,11 @@ void trata_put(int filedesk, Mensagem *first_msg){
     buffer_send = malloc(TAMANHO_MAXIMO);
     buffer_read = malloc(TAMANHO_MAXIMO);
 
-    last_seq = first_msg->controle.sequencia;
+    last_seq = (first_msg->controle.sequencia + 1) % 32;
 
     strcpy(name,(char *) first_msg->dados);
 
+    // cria ponteiro para file descriptor
     FILE *fd = NULL;
     fd = fopen(name,"w");
     if(fd == NULL){
@@ -1188,7 +1249,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
 
 
     msg.marcador_inicio = 126;
-    msg.controle.sequencia = 10;
+    msg.controle.sequencia = last_seq;
     msg.crc = 81;
     defineBuffer(&msg, buffer_send);
     envio = send(filedesk, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -1204,7 +1265,8 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         sizeofmessage = *((int *) msg.dados);
                         msg.marcador_inicio = 126;
                         msg.controle.tamanho = 1;
-                        msg.controle.sequencia = 11;
+                        msg.controle.sequencia = msg.controle.sequencia + 1;
+                        last_seq = msg.controle.sequencia;
                         msg.controle.tipo = OK;
                         msg.crc = 81;
                         defineBuffer(&msg, buffer_send);
@@ -1261,15 +1323,16 @@ void trata_put(int filedesk, Mensagem *first_msg){
 
                                 msg.marcador_inicio = 126;
                                 msg.controle.tamanho = 1;
-                                msg.controle.sequencia = last_seq + 1;
+                                msg.controle.sequencia = msgs[2].controle.sequencia + 1;
+                                last_seq = msg.controle.sequencia;
                                 msg.controle.tipo = ACK;
                                 msg.crc = 81;
                                 defineBuffer(&msg, buffer_send);
                             }else{
-                                printf("!!!!!!!!!!! MANDEI NACK !!!!!!!!!!!!!!!!!!!");
                                 msg.marcador_inicio = 126;
                                 msg.controle.tamanho = 1;
-                                msg.controle.sequencia = last_seq + 1;
+                                msg.controle.sequencia = msgs[2].controle.sequencia + 1;
+                                last_seq = msg.controle.sequencia;
                                 msg.controle.tipo = NACK;
                                 msg.crc = 81;
                                 defineBuffer(&msg, buffer_send);
@@ -1311,63 +1374,72 @@ void trata_put(int filedesk, Mensagem *first_msg){
     free(buffer_send);
     free(buffer_read);
 }
-////////////////////////////////////////////////////////////////// GET REKT ////////////////////
+
 void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequencia){
-    // envia o nome
-    // abre write com esse nome
-    // espera pela resposta OK
-    // enviar descritor/tamanho do arquivo / verificar espaço
-    // espera resposta ok ou erro se erro olhar dados
-    // começa enviar dados
-    // le 127 em 127 adiciona em uma mensagem incrementa , tam/127
-    // if < 127
-    // getchar ++ até construir mensagem , deu 127 faz não deu trata
 
-    printf("endereço relativo local %s\n",local);
-    printf("endereço relativo remoto %s\n",remoto);
-    printf("tipo do comando %s\n",comando);
-
-    printf("iniciando get ... \n");
+    // guarda onde sera criado arquivo localrelativo/nomedoarquivo
     char name[500];
+
     char operador[500], semEspacos[500];
+
     removeEspacos(comando, semEspacos);
     strcpy(operador, remoto);
     strcat(operador, "/");
     strcat(operador, &semEspacos[3]);
-    // aqui é para aproveitar o códigolast_seq = sequencia + 1;
 
     strcpy(name, local);
     strcat(name,"/");
     strcat(name,&semEspacos[3]);
 
-    //strcpy(name,&semEspacos[3]);
 
-    printf("comando com endereço relativo remoto %s\n",operador);
-    printf("comando com endereço relativo local %s\n",name);
-
-
-
+    // descritor de arquivo
     FILE *fp = NULL;
-    int check_file = 0;
+
+    // checa erro de acesso
     int check_error = 0;
+
+    // guarda o valor de saida do send()
     int envio;
+
+    // guarda o valor de saida da read()
     int resposta;
+
     // esse buffer fica responsavel por enviar sempre a ultima resposta
     void *buffer_send;
+
     // esse buffer fica reponsavel por receber os dados do cliente
     void *buffer_read;
+
     // controla o loop principal
     int main_loop = 1;
+
+    // controla a sequencia de acordo com a ultima mensagem
     int last_seq;
+
+    // variaveis auxiliares para identificar a sequencia da mensagem
     int min,med,max;
+
+    // variavel auxiliar para contar as mensagens recebidas
     int cont = 0;
+
+    // usada para pegar o tamanho da mensagem que esta sendo recebida
     int sizeofmessage;
+
+    // erro controla se vai ser usado fclose ou não, para evitar CORRUPTION ERROR
     int erro = 0;
+
+    // checa se os crcs estão sem erro
     int crcs[3];
 
-    // lembre-se do free mate
+    // trata de garantir que não aconteça dois reads seguidos
+    int recebeFD;
 
-    // tenta criar um arquivo e devolve resposta de sucesso com o nome...
+    // controla o envio do comando GET
+    int loop_get = 1;
+
+    // controla o timeout do envio da mensagem GET
+    int resp;
+
     Mensagem msg,msgs[3];
     msgs[0].dados = malloc(TAMANHO_MAXIMO);
     msgs[1].dados = malloc(TAMANHO_MAXIMO);
@@ -1376,17 +1448,10 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
     buffer_send = malloc(TAMANHO_MAXIMO);
     buffer_read = malloc(TAMANHO_MAXIMO);
 
-
-
     last_seq = sequencia + 1;
 
     strcpy(msg.dados,operador);
 
-
-
-    int recebeFD;
-    int loop_get = 1;
-    int resp;
 
     msg.marcador_inicio = 126;
     msg.controle.sequencia = last_seq;
@@ -1409,6 +1474,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                 if(msg.controle.tipo == FD){
                     recebeFD = 0;
                     loop_get = 0;
+                    last_seq = (msg.controle.sequencia + 1) % 32;
                 }
             }else{
                 envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -1426,11 +1492,9 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
             if(recuperaMensagem(&msg, buffer_read)){
                 switch(msg.controle.tipo){
                     case ERRO:
-                        // int aux =
-                        printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
-                        // printf("%d\n",*((char *) msg.dados));
                         main_loop = 0;
                         erro = 1;
+                        last_seq = (msg.controle.sequencia + 1) % 32;
                     break;
                     case FD:
                         fp = fopen(name,"w");
@@ -1439,20 +1503,18 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                             printf("mensagem de erro : %s", strerror(errno));
                             main_loop = 0;
                             erro = 1;
+                            last_seq = (msg.controle.sequencia + 1) % 32;
                         }
-
                         check_error = access(name, W_OK);
-
                         if(check_error){
                             printf("Erro de access no arquivo : %s\n", strerror(errno));
                             main_loop = 0;
                         }
-                        // sizeofmessage = (int *) msgs[0].dados;
-                        // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
+
                         sizeofmessage = *((int *) msg.dados);
                         msg.marcador_inicio = 126;
                         msg.controle.tamanho = 0;
-                        msg.controle.sequencia = 11;
+                        msg.controle.sequencia = last_seq;
                         msg.controle.tipo = OK;
                         defineBuffer(&msg, buffer_send);
                         // adiciona o file descriptor ...
@@ -1516,7 +1578,8 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
 
                             msg.marcador_inicio = 126;
                             msg.controle.tamanho = 1;
-                            msg.controle.sequencia = last_seq + 1;
+                            // msgs[2].controle.sequencia tem o valor da ultima sequencia recebida
+                            msg.controle.sequencia = msgs[2].controle.sequencia + 1;
                             msg.controle.tipo = ACK;
                             msg.crc = 81;
                             defineBuffer(&msg, buffer_send);
@@ -1524,7 +1587,8 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         }else{
                             msg.marcador_inicio = 126;
                             msg.controle.tamanho = 1;
-                            msg.controle.sequencia = last_seq + 1;
+                            // msgs[2].controle.sequencia tem o valor da ultima sequencia recebida
+                            msg.controle.sequencia = msgs[2].controle.sequencia + 1;
                             msg.controle.tipo = NACK;
                             msg.crc = 81;
                             defineBuffer(&msg, buffer_send);
@@ -1543,7 +1607,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
         // mensagens de confirmação sempre tem o tamanho 1
 
     }
-    printf("saindo do get\n");
+    // printf("saindo do get\n");
 
     if(!erro){
         fclose(fp);
@@ -1556,33 +1620,67 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
     free(buffer_read);
 }
 
-////////////////////////////////////////////////////////////////// TRATA GET REKT ////////////////////
+
 void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
+    // ira reter o nome com o caminho relativo
     char name[500];
+
+    // controla se encontrou algum erro no caminho caso contrario fica 1
     int sucess = 1;
-    int try_send_name = 1;
+
+    // tenta enviar o file descriptor -- tamanho no caso
     int try_send_fd = 1;
+
+    // controla o envio dos dados montados(ou seja não é necessario de montar o buffer de cada)
     int try_send_data = 1;
-    int try_send_fim = 1;
+
+    // controla se todo arquivo ja foi lido
     int has_data_to_sent = 1;
+
+    // controla a sequencia de acordo com a ultima mensagem
     int last_seq;
+
+    // guarda valor do send()
     int envio;
-    int resposta;
+
+    // controla loop's que aguardam resposta do master
     int reading;
+
+    // buffer recebe mensagem
     void *buffer;
+
+    // esse buffer fica responsavel por enviar sempre a ultima resposta
     void *buffer_send;
+
+    // buffer de envio da primeira mensagem
     void *buffer0;
+
+    // buffer de envio da segunda mensagem
     void *buffer1;
+
+    // buffer de envio da terceira mensagem
     void *buffer2;
+
+    // controla o tamanho da mensagem
     int indice;
+
+    // controla a sequencia de cada mensagem
     int sequencia0,sequencia1,sequencia2;
+
+    // contem o tamanho da mensagem
     int tamanho_da_mensagem;
+
+    // controla o tamanho das mensagens uma a uma
     int tam0,tam1,tam2;
+
+    // erro garante que não sera utilizado fclose para evitar CORRUPTION ERROR
     int erro = 0;
+
+    // variavel auxiliar do timeout
     int resp;
 
-
+    // vetor de string que guarda as mensagems 127 em 127 bytes
     char *dados[3];
 
     dados[0] = malloc(TAMANHO_MAXIMO);
@@ -1593,15 +1691,13 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     buffer0 = malloc(TAMANHO_MAXIMO);
     buffer1 = malloc(TAMANHO_MAXIMO);
     buffer2 = malloc(TAMANHO_MAXIMO);
+
+    // estrutura de controle da mensagem
     Mensagem    msg;
     msg.dados = malloc(127);
 
-    // depende estou enviando o nome junto?
+    
     strcpy(name,(char*) first_mensagem->dados);
-
-
-
-    printf("Nome com local relativo do arquivo que o servidor ira enviar %s\n",name);
 
 
     int check_file;
@@ -1638,8 +1734,8 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
         rewind(fd);
     }
 
-    last_seq = msg.controle.sequencia;
-    last_seq += 1;
+    last_seq = (msg.controle.sequencia + 1) % 32;
+    
 
     if(sucess){
         // apos enviar o nome tenta enviar o file descriptor
@@ -1671,6 +1767,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
                         if(msg.controle.tipo == OK){
                             reading = 0;
                             try_send_fd = 0;
+                            last_seq = (msg.controle.sequencia + 1) % 32;
                         }
                     }else{
                         envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -1684,7 +1781,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
         while(has_data_to_sent){
 
-            sequencia0 = msg.controle.sequencia;
+            sequencia0 = (msg.controle.sequencia + 1) % 32;
             indice = 0;
             while(i < tamanho_da_mensagem && indice < 127){
                 dados[0][indice] = getc(fd);
@@ -1746,7 +1843,6 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
                             if(msg.controle.tipo == ACK){
                                 reading = 0;
                                 try_send_data = 0;
-                                // incrementa a sequencia em tres somente após a garantia que enviei as tres
                                 msg.controle.sequencia = (msg.controle.sequencia + 3);
                             }
                             if(msg.controle.tipo == NACK){
@@ -1759,7 +1855,6 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
                             envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
                             envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
                         }
-                        // calcula temporização aqui tambem
                     }
                     if(i >= tamanho_da_mensagem){
                         has_data_to_sent = 0;
