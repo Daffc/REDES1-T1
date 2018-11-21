@@ -135,8 +135,9 @@ int ordena(int *min,int *med, int *max){
     int medio = tmp1;
     int maior1 = (medio + 1) % 32;
     int maior2 = (maior1 + 1) % 32;
-    int menor1 = (medio - 1) % 32;
-    int menor2 = (menor1 - 1)  % 32;
+    int menor1 = (medio + 31) % 32;
+    int menor2 = (menor1 + 31)  % 32;
+
     // printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
     // printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
 
@@ -1473,6 +1474,14 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                     loop_get = 0;
                     last_seq = (msg.controle.sequencia + 1) % 32;
                 }
+                if(msg.controle.tipo == ERRO){
+                    recebeFD = 0;
+                    loop_get = 0;
+                    main_loop = 0;
+                    erro = 1;
+                    last_seq = (msg.controle.sequencia + 1) % 32;  
+                    printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados)));                  
+                }
             }else{
                 envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
             }
@@ -1492,12 +1501,13 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         main_loop = 0;
                         erro = 1;
                         last_seq = (msg.controle.sequencia + 1) % 32;
+                        printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados))); 
                     break;
                     case FD:
                         fp = fopen(name,"w");
                         if(fp == NULL){
                             printf("erro ao criar fd do arquivo : %s \n",name);
-                            printf("mensagem de erro : %s", strerror(errno));
+                            printf("mensagem de erro : %s\n", strerror(errno));
                             main_loop = 0;
                             erro = 1;
                             last_seq = (msg.controle.sequencia + 1) % 32;
@@ -1535,7 +1545,6 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         min = msgs[0].controle.sequencia;
                         med = msgs[1].controle.sequencia;
                         max = msgs[2].controle.sequencia;
-
                         int try = ordena(&min,&med,&max);
 
                         if(try && crcs[0] && crcs[1] && crcs[2]){
@@ -1696,10 +1705,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     
     strcpy(name,(char*) first_mensagem->dados);
 
-
-    int check_file;
-    check_file = access(name,F_OK);
-    if(check_file){
+    if(access(name,F_OK)){
         printf("No such file or directory \n");
         *((char *)msg.dados) = errno;
         erro = 1;
