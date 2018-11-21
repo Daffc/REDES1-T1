@@ -109,5 +109,9 @@ int main(int argc, char *argv[]){
             }
         }
     }
+
+    free(msg.dados);
+    free(buffer);
+
     return 0;
 }

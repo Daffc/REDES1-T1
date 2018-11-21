@@ -10,12 +10,13 @@
 #include <pwd.h>
 #include <poll.h>
 
-int main(){
+int main()
+{
 
-    int         retorno, resp;
-    char        comando[100], local[500], remoto[500], *uName, *bufferLS;
-    void        *buffer_send, *buffer_read;
-    Mensagem    msg;
+    int retorno, resp;
+    char comando[100], local[500], remoto[500], *uName, *bufferLS;
+    void *buffer_send, *buffer_read;
+    Mensagem msg;
 
     struct pollfd fds[1];
 
@@ -29,7 +30,6 @@ int main(){
 
     msg.dados = malloc(127);
 
-
     // Definindo mensagem inicial.
     msg.marcador_inicio = 126;
     msg.controle.tamanho = 0;
@@ -37,37 +37,41 @@ int main(){
     msg.controle.tipo = HANDSHAKE;
     msg.crc = 81;
 
-    defineBuffer(&msg, buffer_send);   
-    
+    defineBuffer(&msg, buffer_send);
+
     write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
 
     int received = 1;
-    while(received){
+    while (received)
+    {
 
-        //Envia mensagem solicitando Informações do servidor (Caminho do iretório onde servido esta sendo executado).    
-        
-        
+        //Envia mensagem solicitando Informações do servidor (Caminho do iretório onde servido esta sendo executado).
 
         resp = timeout(fds, buffer_read);
-        
-        if(!resp){
+
+        if (!resp)
+        {
             write(fds[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho));
         }
-        
+
         //Somente le mensagem caso marcador de inicio sejá '0111 1110'
-        if((*((unsigned char *)buffer_read) == 126) && resp){
-            if(recuperaMensagem(&msg, buffer_read)){
+        if ((*((unsigned char *)buffer_read) == 126) && resp)
+        {
+            if (recuperaMensagem(&msg, buffer_read))
+            {
 
                 printf("%d\t", msg.marcador_inicio);
                 printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
                 printf("%s\t", (char *)msg.dados);
                 printf("%d\n", msg.crc);
 
-                uName = getpwuid(geteuid ())->pw_dir;
+                uName = getpwuid(geteuid())->pw_dir;
                 strcpy(remoto, msg.dados);
                 getcwd(local, 500);
                 received = 0;
-            }else{
+            }
+            else
+            {
 
                 msg.controle.tipo = NACK;
                 msg.marcador_inicio = 126;
@@ -76,12 +80,11 @@ int main(){
                 defineBuffer(&msg, buffer_send);
             }
         }
-        
     }
-    
 
     // TESTES COM COMANDOS !!!
-    while(1){
+    while (1)
+    {
         imprimeLocalizacao(local, remoto);
 
         // Le linha de comando indicada por usuario.
@@ -90,14 +93,17 @@ int main(){
         /**
          * Caso comando inicie com a String "ls".
         */
-        if(strstr(comando, "ls") ==  comando){
+        if (strstr(comando, "ls") == comando)
+        {
             retorno = local_ls(comando, local, &bufferLS);
 
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
-            if(retorno){
+            if (retorno)
+            {
                 printf("Comando '%s' inválido\n", comando);
             }
-            else{
+            else
+            {
                 // Caso operação tenha ocorricdo como esperado, imprime resuldado do comando informado.
                 printf("%s", bufferLS);
                 free(bufferLS);
@@ -107,17 +113,21 @@ int main(){
         /**
          * Caso comando inicie com a String "cd".
         */
-        else if(strstr(comando, "cd") ==  comando){
+        else if (strstr(comando, "cd") == comando)
+        {
             retorno = local_cd(comando, local);
 
             // Verifica se houve erro na operação.
-            if(retorno){
+            if (retorno)
+            {
                 // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
-                if(retorno < 0){
+                if (retorno < 0)
+                {
                     printf("O caminho indicado não aponta para um diretório.\n");
                 }
                 // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
-                else{
+                else
+                {
                     printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(retorno));
                 }
             }
@@ -126,11 +136,13 @@ int main(){
         /**
          * Caso comando inicie com a String "rls".
         */
-        else if(strstr(comando, "rls") ==  comando){
+        else if (strstr(comando, "rls") == comando)
+        {
             retorno = remote_ls(fds, remoto, comando, msg.controle.sequencia);
 
             // Caso retorno de função seja diferente de 0, informar o erro ao usuário.
-            if(retorno){
+            if (retorno)
+            {
                 printf("Comando '%s' inválido\n", comando);
             }
         }
@@ -138,7 +150,8 @@ int main(){
         /**
          * Caso comando inicie com a String "rcd".
         */
-        else if(strstr(comando, "rcd") ==  comando){
+        else if (strstr(comando, "rcd") == comando)
+        {
             printf("COMANDO RCD\n");
             remote_cd(fds, remoto, comando, msg.controle.sequencia);
         }
@@ -146,15 +159,17 @@ int main(){
         /**
          * Caso comando inicie com a String "get".
         */
-        else if(strstr(comando, "get") ==  comando){
+        else if (strstr(comando, "get") == comando)
+        {
             printf("COMANDO GET\n");
-            get(fds,local,remoto,comando,msg.controle.sequencia);
+            get(fds, local, remoto, comando, msg.controle.sequencia);
         }
 
         /**
          * Caso comando inicie com a String "put".
         */
-        else if(strstr(comando, "put") ==  comando){
+        else if (strstr(comando, "put") == comando)
+        {
             printf("COMANDO PUT\n");
             put(fds, local, remoto, comando);
         }
@@ -162,12 +177,14 @@ int main(){
         /**
          * Caso comando informado não condiza com nenhum dos listados acima (cd, ls e suas variações).
         */
-        else{
+        else
+        {
             printf("Comando '%s' inválido\n", comando);
         }
     }
 
-
+    free(buffer_send);
+    free(buffer_read);
+    free(msg.dados);
     return 0;
 }
-
