@@ -1846,7 +1846,6 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
                             if(msg.controle.tipo == ACK){
                                 reading = 0;
                                 try_send_data = 0;
-                                msg.controle.sequencia = (msg.controle.sequencia + 3);
                             }
                             if(msg.controle.tipo == NACK){
                                     envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
