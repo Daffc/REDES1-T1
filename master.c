@@ -152,7 +152,6 @@ int main()
         */
         else if (strstr(comando, "rcd") == comando)
         {
-            printf("COMANDO RCD\n");
             remote_cd(fds, remoto, comando, msg.controle.sequencia);
         }
 
@@ -161,7 +160,6 @@ int main()
         */
         else if (strstr(comando, "get") == comando)
         {
-            printf("COMANDO GET\n");
             get(fds, local, remoto, comando, msg.controle.sequencia);
         }
 
@@ -170,7 +168,6 @@ int main()
         */
         else if (strstr(comando, "put") == comando)
         {
-            printf("COMANDO PUT\n");
             put(fds, local, remoto, comando);
         }
 

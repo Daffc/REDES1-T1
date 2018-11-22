@@ -10,29 +10,24 @@
 #include <poll.h>
 
 
-void handshakeMsg(Mensagem * msg){
+// void handshakeMsg(Mensagem * msg){
 
-        /**
-         * Recupera nome do usuário atual.
-        */
-        char local_dir[500];
+//         /**
+//          * Recupera nome do usuário atual.
+//         */
+//         char local_dir[500];
 
-        getcwd(local_dir, 500);
+//         getcwd(local_dir, 500);
 
-        /**
-         * Define mensagem com nome do usuario atual.
-        */
-        msg->marcador_inicio = 126;
-        msg->controle.tamanho = strlen(local_dir) + 1;
-        memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
-        msg->controle.sequencia++;
+//         /**
+//          * Define mensagem com nome do usuario atual.
+//         */
+//         msg->marcador_inicio = 126;
+//         msg->controle.tamanho = strlen(local_dir) + 1;
+//         memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
+//         msg->controle.sequencia++;
 
-        /**
-         * Calcular CRC AQUI !!!.
-        */
-        /**/msg->crc = 81;
-        /*---------------------*/
-}
+// }
 
 
 int main(int argc, char *argv[]){

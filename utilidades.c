@@ -38,6 +38,10 @@ void removeEspacos(char * origem, char * destino){
     destino[i+1] = '\0';
 }
 
+
+/**
+ * Recebe mensagem e buffer destino , e popula buffer com conteudo da mensagem + crc.
+ */
 void defineBuffer(Mensagem * msg, void * buffer){
 
     void *buffer_crc;
@@ -58,7 +62,9 @@ void defineBuffer(Mensagem * msg, void * buffer){
     free(buffer_crc);
 }
 
-
+/**
+ * Recebe buffer e mensagem destino , e popula mensagem com conteudo da buffer e retornando resultado de calculo de crc.
+ */
 int recuperaMensagem(Mensagem * msg, void * buffer){
 
     void *buffer_crc;
@@ -69,8 +75,6 @@ int recuperaMensagem(Mensagem * msg, void * buffer){
 
     // Guarda informações de controle (tamanho, sequencia, tipo)
     memcpy(&(msg->controle), buffer + 1, 2);
-
-    // printf("%d\n", *((char *)buffer + 3));
 
     //Guarda dados de acordo com o informado em controle.tamanho
     memcpy(msg->dados, buffer + 3, msg->controle.tamanho);
@@ -120,11 +124,14 @@ int timeout(struct pollfd fds[], void *buffer_read){
     }
     // Caso tudo ocorra normalmente.
     if (fds[0].revents & POLLIN){
-        // printf ("DEU BOM\n");
         resp = read(fds[0].fd, buffer_read, TAMANHO_MAXIMO);
         return 1;
     }
 }
+
+/**
+ * Recebe tres valores sem ordem , e os devolve ordenados
+ */
 
 int ordena(int *min,int *med, int *max){
 
@@ -197,6 +204,11 @@ int tamanhoMensagem(int i){
     return (i + 4);
 }
 
+/**
+ * Trata resultado de comando nativo ls + parametros e devolve resultado em alocação de buffer saida.
+ * Retornando inteiro 0, caso operação tenha sido executada com sucesso, ou erro relacionado
+ */
+
 int local_ls(char * comando, char * local, char **bufferSaida){
     char    retorno, operador[100];
     long int     i = 0;
@@ -251,10 +263,13 @@ int local_ls(char * comando, char * local, char **bufferSaida){
         return 1;
 }
 
+/**
+ * Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
+ * servidor invoca ls local e retorna para mestre resposta do 'ls' solicitado.
+ * Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+ */
 int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia){
-    // Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
-    // servidor invoca cd local e retorna para mestre resposta do 'ls' solicitado.
-    // Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+    
 
     char        operador[500], semEspacos[500], impressor[128];
     long int    ponteiroResposta = 0;
@@ -381,7 +396,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
                     // printf(" ** %s\n", (char *)msg.dados);
                     switch(msg.controle.tipo){
                         case ERRO:
-                            printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
+                            // printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
                             main_loop = 0;
                             erro = 1;
                         break;
@@ -418,7 +433,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
                             recebeMT = 1;
                         break;
                         case FIM:
-                            printf("\nRecebi FIM\n");
+                            // printf("\nRecebi FIM\n");
                             main_loop = 0;
                         break;
                         case NACK:
@@ -461,6 +476,10 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
         return 1;
     }
 }
+
+/**
+ * função que trata requisição de rls no lado do servidor, utilizando da função local_ls
+ */
 
 void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
 
@@ -528,7 +547,7 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
 
     tamanho_da_mensagem = (strlen(bufferResposta));
 
-    printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+    // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
 
     last_seq = first_mensagem->controle.sequencia;
     last_seq += 1;
@@ -616,6 +635,10 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
     free(msg.dados);
 }
 
+/**
+ * função que trata requisição de cd, verificando permição e existencia de destino, e atualizando vetor que armazena caminho relativo.
+ * Retorna 0 caso operação tenha sido efetuada com sucesso, ou valor correspondente ao código de erro.
+ */
 int local_cd(char * comando, char * local){
     // verificar permissão/existência
     // int access(const char *, int); retorno errno
@@ -698,6 +721,12 @@ int local_cd(char * comando, char * local){
         return errno;
     }
 }
+
+/**
+ * Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
+ * servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
+ * Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+ */
 
 void remote_cd(struct pollfd conexao[], char *local, char *comando, int sequencia){
 
@@ -800,6 +829,9 @@ void remote_cd(struct pollfd conexao[], char *local, char *comando, int sequenci
 
 }
 
+/**
+ * função que trata requisição de rcd no lado do servidor, utilizando da função local_cd
+ */
 
 void trata_cd(int conexao, Mensagem *first_mensagem){
 
@@ -836,6 +868,11 @@ void trata_cd(int conexao, Mensagem *first_mensagem){
     free(msg.dados);
 }
 
+/**
+ * Retira o nome do arquivo que sera enviado da variavel comando
+ * E realiza o envio de mensagens entre o master/slave 
+ */
+
 void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
 
@@ -858,13 +895,13 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
     //strcpy(name,&semEspacos[3]);
 
-    printf("comando com endereço relativo remoto %s\n",operador);
-    printf("tamanho do operador : %ld\n",strlen(operador));
-    printf("comando com endereço relativo local %s\n",name);
+    // printf("comando com endereço relativo remoto %s\n",operador);
+    // printf("tamanho do operador : %ld\n",strlen(operador));
+    // printf("comando com endereço relativo local %s\n",name);
 
     // char semEspacos[500];
     // removeEspacos(name, semEspacos);
-    printf("%s\n",name);
+    // printf("%s\n",name);
     if(access(name,F_OK)){
         printf("mensagem de erro :%s\n",strerror(errno));
         printf("No such file or directory \n");
@@ -1106,7 +1143,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
                 resp = timeout(conexao, buffer);
                 if(!resp){
-                    printf("demorou reenviando...");
+                    // printf("demorou reenviando...");
                     envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
                     envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
                     envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
@@ -1167,9 +1204,14 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
 }
 
+/**
+ * Recebe o nome do arquivo que recebe da mensagem enviada pelo master
+ * E realiza o recebimento de mensagens entre o slave/master
+ */
+
 void trata_put(int filedesk, Mensagem *first_msg){
 
-    printf("iniciando put ... \n");
+    // printf("iniciando put ... \n");
 
 
     // int check_file = 0;
@@ -1272,7 +1314,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         // em todo caso para teste ira enviar ok
                     break;
                     case DADOS:
-                        printf("Recebi o primeiro dado tratando\n");
+                        // printf("Recebi o primeiro dado tratando\n");
                         // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                         crcs[0] = recuperaMensagem(&msgs[0], buffer_read);
                         cont = 1;
@@ -1284,14 +1326,14 @@ void trata_put(int filedesk, Mensagem *first_msg){
                                     *((unsigned char *)buffer_read) = 0;
                                 }
                             }
-                            printf("Recebi as tres mensagens TCHAU\n");
+                            // printf("Recebi as tres mensagens TCHAU\n");
                             min = msgs[0].controle.sequencia;
                             med = msgs[1].controle.sequencia;
                             max = msgs[2].controle.sequencia;
 
                             int try = ordena(&min,&med,&max);
 
-                            printf("crcs[0] = %d && crcs[1] = %d && crcs[2] = %d\n",crcs[0],crcs[1],crcs[2]);
+                            // printf("crcs[0] = %d && crcs[1] = %d && crcs[2] = %d\n",crcs[0],crcs[1],crcs[2]);
 
                             if(try && crcs[0] && crcs[1] && crcs[2]){
 
@@ -1337,7 +1379,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                             }
                     break;
                     case FIM:
-                        printf("Recebi FIM\n");
+                        // printf("Recebi FIM\n");
                         main_loop = 0;
                     break;
                 }
@@ -1349,16 +1391,15 @@ void trata_put(int filedesk, Mensagem *first_msg){
                 msg.crc = 81;
                 defineBuffer(&msg, buffer_send);
             }
-            // *((unsigned char *)buffer_read) = 0;
 
-            printf("sai do case/switch\n");
+            // printf("sai do case/switch\n");
         }
         // criar um temporizador e renviar a mensagem
         // mensagens de confirmação sempre tem o tamanho 1
-        printf("enviando mensagem ao cliente\n");
+        // printf("enviando mensagem ao cliente\n");
         envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
     }
-    printf("saindo do put\n");
+    // printf("saindo do put\n");
 
     fclose(fd);
 
@@ -1372,6 +1413,12 @@ void trata_put(int filedesk, Mensagem *first_msg){
     free(buffer_send);
     free(buffer_read);
 }
+
+/**
+ * Master envia requisição ao slave, o nome do arquivo requisitado, esta na variavel comando
+ * Espera slave verificar a existencia/permissão do arquivo
+ * Recebe os dados caso slave retorne ok
+ */
 
 void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequencia){
 
@@ -1603,7 +1650,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(1), 0);
                     break;
                     case FIM:
-                        printf("Recebi FIM\n");
+                        // printf("Recebi FIM\n");
                         main_loop = 0;
                     break;
                 }
@@ -1627,6 +1674,10 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
     free(buffer_read);
 }
 
+/**
+ * Slave recebe requisição do master e faz a verificação de existencia/permissão
+ * Caso sucesso envia a(s) mensagem(s) para o master
+ */
 
 void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
@@ -1733,7 +1784,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
         fseek(fd,0,SEEK_END);
         tamanho_da_mensagem = ftell(fd);
-        printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+        // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
         // devolve o ponteiro no inicio do file descriptor
         rewind(fd);
     }
@@ -1903,6 +1954,10 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     free(msg.dados);
 }
 
+/**
+ * Cria a tabela de crc, baseada no polinomio cujo valor binario 7
+ */
+
 void calcula_tabela_crc(){
 
     __int8_t base = 0x7;
@@ -1925,6 +1980,10 @@ void calcula_tabela_crc(){
         tabela[i] = byteAtual;
     }
 }
+
+/**
+ * Executa calculo de crc e retorna o valor
+ */
 
 unsigned char calcula_crc(__int8_t *dados,int tamanho){
 

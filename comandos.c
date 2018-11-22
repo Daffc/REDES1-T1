@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * Chama por rotina nativa e retorna ponteiro para streaming contendo resposta
+ */
 
 FILE * IniciaDescritorLs(char *comando, char *local)
 {    
@@ -22,7 +25,9 @@ FILE * IniciaDescritorLs(char *comando, char *local)
 
     return fp;
 }
-
+/**
+ * Finaliza ponteiro de streaming
+ */
 void FinalizaDescritorLs(FILE *fp){
     if(fp != NULL){}
         pclose(fp);    
