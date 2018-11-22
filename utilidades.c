@@ -651,74 +651,76 @@ int local_cd(char * comando, char * local){
      * Remove espaços de comando e guarda resultado em operador.
     */
     removeEspacos(comando, semEspacos);
-
-    strcpy(operador, local);
-    strcat(operador, "/");
-    strcat(operador, &semEspacos[2]);
-
-    /**
-     * Verifica existencia e permissão de leitura ao caminho indicado.
-    */
-    if(!access(operador, F_OK | R_OK)){
+    if(semEspacos[2]){
+        strcpy(operador, local);
+        strcat(operador, "/");
+        strcat(operador, &semEspacos[2]);
         /**
-         * Caso usuário deseje voltar um diretório.
+         * Verifica existencia e permissão de leitura ao caminho indicado.
         */
-        if(strstr(comando + 3, "..")){
+        if(!access(operador, F_OK | R_OK)){
             /**
-             * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+             * Caso usuário deseje voltar um diretório.
             */
-            *(strrchr(local, '/')) = '\0';
-
-            /**
-             * Retorna 0, informando que operação foi concluida com sucesso
-            */
-            return 0;
-        }
-        else{
-            stat(operador, &path_stat);
-            if(S_ISDIR(path_stat.st_mode)){
+            if(strstr(comando + 3, "..")){
                 /**
-                 * Redefine local
+                 * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
                 */
-                if(strstr(comando + 3, "..")){
-                    /**
-                     * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
-                    */
-                    *(strrchr(local, '/')) = '\0';
-                }
-                else{
-                    /**
-                     * Caso contrário, string analizada é copiada para local.
-                    */
-                    strcpy(local, operador);
-                }
+                *(strrchr(local, '/')) = '\0';
 
                 /**
                  * Retorna 0, informando que operação foi concluida com sucesso
                 */
                 return 0;
             }
-
-            /**
-             * Caso caminho seja válido porem não esteja relacionad a um diretório.
-            */
             else{
+                stat(operador, &path_stat);
+                if(S_ISDIR(path_stat.st_mode)){
+                    /**
+                     * Redefine local
+                    */
+                    if(strstr(comando + 3, "..")){
+                        /**
+                         * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+                        */
+                        *(strrchr(local, '/')) = '\0';
+                    }
+                    else{
+                        /**
+                         * Caso contrário, string analizada é copiada para local.
+                        */
+                        strcpy(local, operador);
+                    }
+
+                    /**
+                     * Retorna 0, informando que operação foi concluida com sucesso
+                    */
+                    return 0;
+                }
+
                 /**
-                 * Retorna -1, informando que operação não pode ser
-                 * concluida devido ao tipo não condizer com um diretório.
+                 * Caso caminho seja válido porem não esteja relacionad a um diretório.
                 */
-                return -1;
+                else{
+                    /**
+                     * Retorna -1, informando que operação não pode ser
+                     * concluida devido ao tipo não condizer com um diretório.
+                    */
+                    return -1;
+                }
             }
         }
-    }
-    /**
-     * Caso não consiga acessar, printa para usuário erro.
-    */
-    else{
         /**
-         * Retorna erro gerado pelo acesso indevido (Inexistência / Sem permissão de leitura)
+         * Caso não consiga acessar, printa para usuário erro.
         */
-        return errno;
+        else{
+            /**
+             * Retorna erro gerado pelo acesso indevido (Inexistência / Sem permissão de leitura)
+            */
+            return errno;
+        }
+    }else{
+        return 0;
     }
 }
 
@@ -750,76 +752,78 @@ void remote_cd(struct pollfd conexao[], char *local, char *comando, int sequenci
     /**
      * Concatena em operador caminho que deseja-se acessar.
     */
-    strcpy(operador, local);
-    strcat(operador, "/");
-    strcat(operador, &semEspacos[3]);
+    if(semEspacos[3]){
+        strcpy(operador, local);
+        strcat(operador, "/");
+        strcat(operador, &semEspacos[3]);
 
-    /**
-     * Define mensagem com codigo 'CD' e com caminho desejado.
-    */
-    msg.marcador_inicio = 126;
-    msg.controle.tipo = CD;
-    msg.controle.tamanho = strlen(operador) + 1;
-    msg.controle.sequencia = sequencia + 1;
-    strcpy(msg.dados, operador);
+        /**
+         * Define mensagem com codigo 'CD' e com caminho desejado.
+        */
+        msg.marcador_inicio = 126;
+        msg.controle.tipo = CD;
+        msg.controle.tamanho = strlen(operador) + 1;
+        msg.controle.sequencia = sequencia + 1;
+        strcpy(msg.dados, operador);
 
-    defineBuffer(&msg, buffer_send);
+        defineBuffer(&msg, buffer_send);
 
-    send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+        send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
 
-    *((unsigned char *)buffer) = 0;
+        *((unsigned char *)buffer) = 0;
 
-    reading = 1;
-    while(reading){
+        reading = 1;
+        while(reading){
 
-        resp = timeout(conexao, buffer);
+            resp = timeout(conexao, buffer);
 
-        if(!resp){
-            send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
-        }
-
-        if((*((unsigned char *)buffer) == 126) && resp){
-
-            if(recuperaMensagem(&msg, buffer)){
-
-                switch(msg.controle.tipo){
-                    case OK:
-                        reading = 0;
-
-                        // Caso o solicitado seja voltar um diretório.
-                        if(strstr(comando + 3, "..")){
-                            /**
-                            * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
-                            */
-                            *(strrchr(local, '/')) = '\0';
-                        }
-                        else{
-                            /**
-                            * Caso contrário, string analizada é copiada para local.
-                            */
-                            strcat(local,"/");
-                            strcat(local,&semEspacos[3]);
-                        }
-                    break;
-                    case ERRO:
-                        reading = 0;
-                        erro = *((char *) msg.dados);
-                        if(erro){
-                        // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
-                            if(erro < 0){
-                                printf("O caminho indicado não aponta para um diretório.\n");
-                            }
-                            // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
-                            else{
-                                printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
-                            }
-                        }
-                    break;
-                }
-            }else{
+            if(!resp){
                 send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
             }
-            *((unsigned char *)buffer) = 0;
+
+            if((*((unsigned char *)buffer) == 126) && resp){
+
+                if(recuperaMensagem(&msg, buffer)){
+
+                    switch(msg.controle.tipo){
+                        case OK:
+                            reading = 0;
+
+                            // Caso o solicitado seja voltar um diretório.
+                            if(strstr(comando + 3, "..")){
+                                /**
+                                * Procura pela última ocorrencia da '/' a string local e a substitui por '\0'
+                                */
+                                *(strrchr(local, '/')) = '\0';
+                            }
+                            else{
+                                /**
+                                * Caso contrário, string analizada é copiada para local.
+                                */
+                                strcat(local,"/");
+                                strcat(local,&semEspacos[3]);
+                            }
+                        break;
+                        case ERRO:
+                            reading = 0;
+                            erro = *((char *) msg.dados);
+                            if(erro){
+                            // Verifica se erro está relacionado ao tipo apontado por comando solicitado.
+                                if(erro < 0){
+                                    printf("O caminho indicado não aponta para um diretório.\n");
+                                }
+                                // Caso erro esteja relacionado a permissão de leitura ou existência do caminho solicitado
+                                else{
+                                    printf("Não foi possivel concluir operação em no caminho indicado : %s\n", strerror(erro));
+                                }
+                            }
+                        break;
+                    }
+                }else{
+                    send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
+                }
+                *((unsigned char *)buffer) = 0;
+            }
         }
     }
 
@@ -1527,6 +1531,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                     main_loop = 0;
                     erro = 1;
                     last_seq = (msg.controle.sequencia + 1) % 32;  
+                    printf("%d\n",*((char*) msg.dados));
                     printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados)));                  
                 }
             }else{
@@ -1548,6 +1553,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         main_loop = 0;
                         erro = 1;
                         last_seq = (msg.controle.sequencia + 1) % 32;
+                        printf("%d\n",*((char*) msg.dados));
                         printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados))); 
                     break;
                     case FD:
@@ -1768,7 +1774,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     stat(name, &path_stat);
     if(!S_ISREG(path_stat.st_mode)){
         printf("Erro arquivo invalido : TIPO\n");
-        *((char *)msg.dados) = errno;
+        *((char *)msg.dados) = 2;
         erro = 1;
         goto label;
     }
