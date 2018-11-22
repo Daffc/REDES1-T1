@@ -10,26 +10,6 @@
 #include <poll.h>
 
 
-// void handshakeMsg(Mensagem * msg){
-
-//         /**
-//          * Recupera nome do usuário atual.
-//         */
-//         char local_dir[500];
-
-//         getcwd(local_dir, 500);
-
-//         /**
-//          * Define mensagem com nome do usuario atual.
-//         */
-//         msg->marcador_inicio = 126;
-//         msg->controle.tamanho = strlen(local_dir) + 1;
-//         memcpy(msg->dados, local_dir, strlen(local_dir) + 1);
-//         msg->controle.sequencia++;
-
-// }
-
-
 int main(int argc, char *argv[]){
 
     int saidaread;
@@ -56,11 +36,6 @@ int main(int argc, char *argv[]){
         if(*((unsigned char *)buffer) == 126){
             if(recuperaMensagem(&msg, buffer)){
 
-                printf("%d\t", msg.marcador_inicio);
-                printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-                printf("%s\t", (char *)msg.dados);
-                printf("%d\n", msg.crc);
-
                 switch(msg.controle.tipo){
                     case HANDSHAKE:
                         getcwd((char *)msg.dados, 500);
@@ -70,7 +45,6 @@ int main(int argc, char *argv[]){
                         */
                         msg.marcador_inicio = 126;
                         msg.controle.tamanho = strlen((char *)msg.dados) + 1;
-                        // memcpy(msg.dados, local, strlen(local) + 1);
                         msg.controle.sequencia++;
                         
                         defineBuffer(&msg, buffer);

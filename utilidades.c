@@ -143,8 +143,6 @@ int ordena(int *min,int *med, int *max){
     int menor1 = (medio + 31) % 32;
     int menor2 = (menor1 + 31)  % 32;
 
-    // printf("tmp0 = %d,tmp1 = %d,tmp2 = %d\n",tmp0,tmp1,tmp2);
-    // printf(" menor2 = %d menor1 = %d medio = %d maior1 = %d maior2 = %d\n",menor2,menor1,medio,maior1,maior2);
 
         if(tmp0 == menor1 && tmp2 == maior1){
             *min = tmp0;
@@ -238,7 +236,7 @@ int local_ls(char * comando, char * local, char **bufferSaida){
     if(fpls){
 
         *bufferSaida = malloc(1000);
-        
+
         /*Le caracter por caracter do arquivo de resposta do ls aberto guarda-o em bufferSaida*/
         while ((retorno = getc(fpls)) != EOF) {
             (*bufferSaida)[i] = retorno ;
@@ -267,7 +265,7 @@ int local_ls(char * comando, char * local, char **bufferSaida){
  * Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
  */
 int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia){
-    
+
 
     char        operador[500], semEspacos[500], impressor[128];
     long int    ponteiroResposta = 0;
@@ -305,15 +303,9 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
     */
     if(*operador != '\0'){
 
-        printf("iniciando RLS... \n");
-
-        //strcpy(name,&semEspacos[3]);
-
-        // printf("comando com endereço relativo remoto %s\n",operador);
-        // printf("comando com endereço relativo local %s\n",name);
-
-        int check_error = 0;
+        // guarda retorno da função send
         int envio;
+        // guarda retorno do read
         int resposta;
         // esse buffer fica responsavel por enviar sempre a ultima resposta
         void *buffer_send;
@@ -321,13 +313,8 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
         void *buffer_read;
         // controla o loop principal
         int main_loop = 1;
+        // contem o ultimo valor da sequencia
         int last_seq;
-        int min,med,max;
-        int cont = 0;
-        int sizeofmessage;
-        int erro = 0;
-
-        // lembre-se do free mate
 
         // tenta criar um arquivo e devolve resposta de sucesso com o nome...
         Mensagem msg,msg_resposta;
@@ -391,26 +378,18 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
 
             if(*((unsigned char *)buffer_read) == 126){
                 if(recuperaMensagem(&msg, buffer_read)){
-                    // printf(" ** %s\n", (char *)msg.dados);
                     switch(msg.controle.tipo){
                         case ERRO:
-                            // printf("there has been a breach: %s \n",strerror(*((char *) msg.dados)));
                             main_loop = 0;
-                            erro = 1;
                         break;
                         case MOSTRA_TELA:
-                            // printf("Recebi o primeiro dado tratando\n");
-                            // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                             recuperaMensagem(&msg_resposta, buffer_read);
-                            // printf("Recebi as tres mensagens TCHAU\n");
-                            // printf("%d %d %d \n",msg_resposta.controle.tamanho,msg_resposta.controle.tamanho,msg_resposta.controle.tamanho);
 
                             // Utilizar 'try' para verificar CRC.
                             int try = 1;
                             if(try){
                                 memcpy(impressor, msg_resposta.dados, msg_resposta.controle.tamanho);
                                 impressor[msg_resposta.controle.tamanho] = '\0';
-                                printf("%s", impressor);
 
                                 msg.marcador_inicio = 126;
                                 msg.controle.tamanho = 1;
@@ -431,7 +410,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
                             recebeMT = 1;
                         break;
                         case FIM:
-                            // printf("\nRecebi FIM\n");
+
                             main_loop = 0;
                         break;
                         case NACK:
@@ -447,13 +426,11 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
                 }
                 *((unsigned char *)buffer_read) = 0;
 
-                // printf("sai do case/switch\n");
+
             }
-            // criar um temporizador e renviar a mensagem
-            // mensagens de confirmação sempre tem o tamanho 1
 
         }
-        // printf("saindo do get\n");
+
 
 
         free(msg_resposta.dados);
@@ -481,12 +458,19 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
 
 void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
 
+    // guarda o local do ls , e os buffer de resposta
     char comando[500], *bufferResposta;
+    // verifica se os ls teve sucesso
     int sucess = 1;
+    // controla envio de dados
     int try_send_data = 1;
+    // controla se existe ainda dados
     int has_data_to_sent = 1;
+    // contem a ultima sequencia enviada
     int last_seq;
+    // guarda retorno de send
     int envio;
+    // enquanto estou aguardando resposta
     int reading;
     unsigned long int ponteiroResposta = 0;
     void *buffer;
@@ -544,8 +528,6 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
     */
 
     tamanho_da_mensagem = (strlen(bufferResposta));
-
-    // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
 
     last_seq = first_mensagem->controle.sequencia;
     last_seq += 1;
@@ -638,9 +620,7 @@ void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem){
  * Retorna 0 caso operação tenha sido efetuada com sucesso, ou valor correspondente ao código de erro.
  */
 int local_cd(char * comando, char * local){
-    // verificar permissão/existência
-    // int access(const char *, int); retorno errno
-    // printar na tela o ERRO possivel
+
 
     char        operador[500], semEspacos[500];
     struct      stat path_stat;
@@ -870,18 +850,10 @@ void trata_cd(int conexao, Mensagem *first_mensagem){
     free(msg.dados);
 }
 
-/**
- * Retira o nome do arquivo que sera enviado da variavel comando
- * E realiza o envio de mensagens entre o master/slave 
- */
+
 
 void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
-
-
-    // printf("endereço relativo local %s\n",local);
-    // printf("endereço relativo remoto %s\n",remoto);
-    // printf("tipo do comando %s\n",comando);
 
     char name[500];
     char operador[500], semEspacos[500];
@@ -889,24 +861,14 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     strcpy(operador, remoto);
     strcat(operador, "/");
     strcat(operador, &semEspacos[3]);
-    // aqui é para aproveitar o código
 
     strcpy(name, local);
     strcat(name,"/");
     strcat(name,&semEspacos[3]);
 
-    //strcpy(name,&semEspacos[3]);
 
-    // printf("comando com endereço relativo remoto %s\n",operador);
-    // printf("tamanho do operador : %ld\n",strlen(operador));
-    // printf("comando com endereço relativo local %s\n",name);
-
-    // char semEspacos[500];
-    // removeEspacos(name, semEspacos);
-    // printf("%s\n",name);
     if(access(name,F_OK)){
         printf("mensagem de erro :%s\n",strerror(errno));
-        printf("No such file or directory \n");
         return;
     }
 
@@ -993,19 +955,16 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     Mensagem    msg;
     msg.dados = malloc(127);
 
-    
-    // recebe o tamanho da mensagem
-    // struct stat bufferino;
-    // stat(fd,&bufferino);
+
+
     fseek(fd,0,SEEK_END);
     tamanho_da_mensagem = ftell(fd);
 
-    // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
-    // devolve o ponteiro no inicio do file descriptor
+
     rewind(fd);
 
     last_seq = (msg.controle.sequencia + 1) % 32;
-    
+
 
 
     while(try_send_name){
@@ -1043,14 +1002,14 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
                         goto saida_put;
                     }
                 }else{
-                    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);                    
+                    envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
                 }
                 // evitar loop infinito
                 *((unsigned char *)buffer) = 0;
             }
         }
     }
-    
+
 
     // apos enviar o nome tenta enviar o file descriptor
     while(try_send_fd){
@@ -1145,7 +1104,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
                 resp = timeout(conexao, buffer);
                 if(!resp){
-                    // printf("demorou reenviando...");
+
                     envio = send(conexao[0].fd, buffer0, tamanhoMensagem(tam0), 0);
                     envio = send(conexao[0].fd, buffer1, tamanhoMensagem(tam1), 0);
                     envio = send(conexao[0].fd, buffer2, tamanhoMensagem(tam2), 0);
@@ -1189,7 +1148,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
 
     envio = send(conexao[0].fd, buffer, tamanhoMensagem(sizeof(FIM)), 0);
 
- 
+
 
     saida_put:
 
@@ -1212,11 +1171,6 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
  */
 
 void trata_put(int filedesk, Mensagem *first_msg){
-
-    // printf("iniciando put ... \n");
-
-
-    // int check_file = 0;
 
 
     // verifica existencia de erro
@@ -1302,8 +1256,6 @@ void trata_put(int filedesk, Mensagem *first_msg){
             if(recuperaMensagem(&msg, buffer_read)){
                 switch(msg.controle.tipo){
                     case FD:
-                        // sizeofmessage = (int *) msgs[0].dados;
-                        // printf("Recebi o tamanho da mensagem %d\n",sizeofmessage);
                         sizeofmessage = *((int *) msg.dados);
                         msg.marcador_inicio = 126;
                         msg.controle.tamanho = 1;
@@ -1312,12 +1264,8 @@ void trata_put(int filedesk, Mensagem *first_msg){
                         msg.controle.tipo = OK;
                         msg.crc = 81;
                         defineBuffer(&msg, buffer_send);
-                        // adiciona o file descriptor ...
-                        // em todo caso para teste ira enviar ok
                     break;
                     case DADOS:
-                        // printf("Recebi o primeiro dado tratando\n");
-                        // toda vez que chamar dados a primeira mensagem vai estar no buffer_read
                         crcs[0] = recuperaMensagem(&msgs[0], buffer_read);
                         cont = 1;
                             while(cont < 3){
@@ -1328,14 +1276,13 @@ void trata_put(int filedesk, Mensagem *first_msg){
                                     *((unsigned char *)buffer_read) = 0;
                                 }
                             }
-                            // printf("Recebi as tres mensagens TCHAU\n");
+
                             min = msgs[0].controle.sequencia;
                             med = msgs[1].controle.sequencia;
                             max = msgs[2].controle.sequencia;
 
                             int try = ordena(&min,&med,&max);
 
-                            // printf("crcs[0] = %d && crcs[1] = %d && crcs[2] = %d\n",crcs[0],crcs[1],crcs[2]);
 
                             if(try && crcs[0] && crcs[1] && crcs[2]){
 
@@ -1381,7 +1328,7 @@ void trata_put(int filedesk, Mensagem *first_msg){
                             }
                     break;
                     case FIM:
-                        // printf("Recebi FIM\n");
+
                         main_loop = 0;
                     break;
                 }
@@ -1394,20 +1341,17 @@ void trata_put(int filedesk, Mensagem *first_msg){
                 defineBuffer(&msg, buffer_send);
             }
 
-            // printf("sai do case/switch\n");
+
         }
-        // criar um temporizador e renviar a mensagem
-        // mensagens de confirmação sempre tem o tamanho 1
-        // printf("enviando mensagem ao cliente\n");
         envio = send(filedesk, buffer_send, tamanhoMensagem(1), 0);
     }
-    // printf("saindo do put\n");
+
 
     fclose(fd);
 
     saida_trataPut:
 
-    
+
     free(msgs[0].dados);
     free(msgs[1].dados);
     free(msgs[2].dados);
@@ -1528,9 +1472,8 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                     loop_get = 0;
                     main_loop = 0;
                     erro = 1;
-                    last_seq = (msg.controle.sequencia + 1) % 32;  
-                    printf("%d\n",*((char*) msg.dados));
-                    printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados)));                  
+                    last_seq = (msg.controle.sequencia + 1) % 32;
+                    printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados)));
                 }
             }else{
                 envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(msg.controle.tamanho), 0);
@@ -1551,8 +1494,7 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         main_loop = 0;
                         erro = 1;
                         last_seq = (msg.controle.sequencia + 1) % 32;
-                        printf("%d\n",*((char*) msg.dados));
-                        printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados))); 
+                        printf("mensagem de erro : %s\n", strerror(*((char*) msg.dados)));
                     break;
                     case FD:
                         fp = fopen(name,"w");
@@ -1572,9 +1514,9 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         }
 
                         sizeofmessage = *((int *) msg.dados);
-                        msg.marcador_inicio = 126;                        
+                        msg.marcador_inicio = 126;
                         msg.controle.sequencia = last_seq;
-                        
+
                         defineBuffer(&msg, buffer_send);
                         // adiciona o file descriptor ...
                         // em todo caso para teste ira enviar ok
@@ -1603,35 +1545,35 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
 
                             if(min == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
+
                             }else if(min == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
+
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
+
                             }
 
                             if(med == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
+
                             }else if(med == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
+
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
+
                             }
 
                             if(max == msgs[0].controle.sequencia){
                                 fwrite((char *) msgs[0].dados,1,msgs[0].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[0].dados);
+
                             }else if(max == msgs[1].controle.sequencia){
                                 fwrite((char *) msgs[1].dados,1,msgs[1].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[1].dados);
+
                             }else{
                                 fwrite((char *) msgs[2].dados,1,msgs[2].controle.tamanho,fp);
-                                // printf("%s\n",(char *) msgs[2].dados);
+
                             }
 
                             msg.marcador_inicio = 126;
@@ -1654,18 +1596,14 @@ void get(struct pollfd conexao[],char *local,char *remoto,char *comando,int sequ
                         envio = send(conexao[0].fd, buffer_send, tamanhoMensagem(1), 0);
                     break;
                     case FIM:
-                        // printf("Recebi FIM\n");
                         main_loop = 0;
                     break;
                 }
             }
-            // *((unsigned char *)buffer_read) = 0;
         }
-        // criar um temporizador e renviar a mensagem
-        // mensagens de confirmação sempre tem o tamanho 1
 
     }
-    // printf("saindo do get\n");
+
 
     if(!erro){
         fclose(fp);
@@ -1758,7 +1696,7 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
     Mensagem    msg;
     msg.dados = malloc(127);
 
-    
+
     strcpy(name,(char*) first_mensagem->dados);
 
     if(access(name,F_OK)){
@@ -1788,13 +1726,13 @@ void trata_get(struct pollfd conexao[],Mensagem *first_mensagem){
 
         fseek(fd,0,SEEK_END);
         tamanho_da_mensagem = ftell(fd);
-        // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+
         // devolve o ponteiro no inicio do file descriptor
         rewind(fd);
     }
 
     last_seq = (msg.controle.sequencia + 1) % 32;
-    
+
 
     if(sucess){
         // apos enviar o nome tenta enviar o file descriptor

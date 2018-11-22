@@ -60,11 +60,6 @@ int main()
             if (recuperaMensagem(&msg, buffer_read))
             {
 
-                printf("%d\t", msg.marcador_inicio);
-                printf("%d\t%d\t%d\t", msg.controle.sequencia, msg.controle.tamanho, msg.controle.tipo);
-                printf("%s\t", (char *)msg.dados);
-                printf("%d\n", msg.crc);
-
                 uName = getpwuid(geteuid())->pw_dir;
                 strcpy(remoto, msg.dados);
                 getcwd(local, 500);

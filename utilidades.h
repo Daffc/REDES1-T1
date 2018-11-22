@@ -62,7 +62,15 @@
      * Transfere Mensagem para buffer que será transmitido
     */
     void defineBuffer(Mensagem *msg, void * buffer);
+    /**
+     * Retira o nome do arquivo que sera enviado da variavel comando
+     * E realiza o envio de mensagens entre o master/slave
+    */
     void put(struct pollfd fds[], char *local , char*remoto , char *name);
+    /**
+     * Recebe o nome do arquivo que recebe da mensagem enviada pelo master
+     * E realiza o recebimento de mensagens entre o slave/master
+     */
     void trata_put(int filedesk,Mensagem *first_message);
     /**
      * Recupera Mensagem de buffer recebido e verifica crc de bonus
@@ -98,15 +106,45 @@
      * 'local' indica posição de memória com localização atual do usuário.
     */
     int local_cd(char * comando, char * local);
+    /**
+     * função que trata requisição de rls no lado do servidor, utilizando da função local_ls
+     */
     void trata_ls(struct pollfd conexao[], Mensagem *first_mensagem);
+    /**
+     * Recebe chamada de mestre, invoca servidor com pedido de 'ls' e espera por resposta.
+     * servidor invoca ls local e retorna para mestre resposta do 'ls' solicitado.
+     * Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+     */
     int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequencia);
+    /**
+     * Recebe chamada de mestre, invoca servidor com pedido de 'cd' e espera por resposta.
+     * servidor invoca cd local e retorna para mestre resposta do 'cd' solicitado.
+     * Recebe resposta, guardando resultado em buffer e retornando '0' no caso operação tenha ocorrido com sucesso ou erro informado pelo servidor.
+     */
     void remote_cd(struct pollfd conexao[], char *local,char *comando, int sequencia);
+    /**
+     * função que trata requisição de rcd no lado do servidor, utilizando da função local_cd
+     */
     void trata_cd(int filedesk,Mensagem *msg);
-
+    /**
+     * Master envia requisição ao slave, o nome do arquivo requisitado, esta na variavel comando
+     * Espera slave verificar a existencia/permissão do arquivo
+     * Recebe os dados caso slave retorne ok
+     */
     void get(struct pollfd conexao[],char *local_remote,char *local_local,char *comando,int sequencia);
+    /**
+     * Slave recebe requisição do master e faz a verificação de existencia/permissão
+     * Caso sucesso envia a(s) mensagem(s) para o master
+     */
     void trata_get(struct pollfd conexao[], Mensagem *msg);
+    /**
+     * Executa calculo de crc e retorna o valor
+     */
 
     unsigned char calcula_crc(__int8_t *dados,int tamanho);
+    /**
+     * Cria a tabela de crc, baseada no polinomio cujo valor binario 7
+     */
     void calcula_tabela_crc();
 
     
