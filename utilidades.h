@@ -7,7 +7,7 @@
 #include <linux/types.h>
 
     #define TAMANHO_MAXIMO 131
-    #define TIMEOUT 2
+    #define TIMEOUT 1
 
     typedef struct ControleMSG{
         unsigned short tamanho:7;

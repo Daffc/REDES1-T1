@@ -94,8 +94,6 @@ int recuperaMensagem(Mensagem * msg, void * buffer){
 
 }
 
-
-
 /**
  * Imprime localidades LOCAL e REMOTA.
 */
@@ -119,7 +117,7 @@ int timeout(struct pollfd fds[], void *buffer_read){
 
     // Caso tempo de espera tenha chegado ao fim.
     if (!resp) {
-        printf("DEMOROU DEMAIS\n");
+        printf("timeout\n");
         return 0;
     }
     // Caso tudo ocorra normalmente.
@@ -1002,7 +1000,7 @@ void put(struct pollfd conexao[], char *local , char*remoto , char *comando){
     fseek(fd,0,SEEK_END);
     tamanho_da_mensagem = ftell(fd);
 
-    printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
+    // printf("tamanho da mensagem %d\n",tamanho_da_mensagem);
     // devolve o ponteiro no inicio do file descriptor
     rewind(fd);
 
