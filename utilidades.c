@@ -220,16 +220,15 @@ int local_ls(char * comando, char * local, char **bufferSaida){
     if(operador[2] == '\0'){
         fpls = IniciaDescritorLs("ls", local);
     }
-    if(strstr(operador+2, "-l")){
+    else if(strstr(operador+2, "-l")){
         fpls = IniciaDescritorLs("ls -l", local);
     }
-    if(strstr(operador+2, "-a")){
+    else if(strstr(operador+2, "-a")){
         fpls = IniciaDescritorLs("ls -a", local);
     }
-    if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
+    else if(strstr(operador+2, "-al") || strstr(operador+2, "-la")){
         fpls = IniciaDescritorLs("ls -la", local);
     }
-
     /**
      * Caso Stream conectando a resposta seja definida, imprime resuldato.
     */
@@ -390,7 +389,7 @@ int remote_ls(struct pollfd conexao[], char *remoto, char *comando, int sequenci
                             if(try){
                                 memcpy(impressor, msg_resposta.dados, msg_resposta.controle.tamanho);
                                 impressor[msg_resposta.controle.tamanho] = '\0';
-
+				printf("%s", impressor);
                                 msg.marcador_inicio = 126;
                                 msg.controle.tamanho = 1;
                                 msg.controle.sequencia = last_seq + 1;
